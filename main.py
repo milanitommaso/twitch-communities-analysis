@@ -9,37 +9,10 @@ import datetime
 from config import *
 
 data = {}
-
-def save_chatters(scheduler,):
-    global data
-
-    filename = f"dumps/{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json"
-    print(f"\t\t SAVING CHATTERS IN {filename}")
-    with open(filename, "w") as f_w:
-        json.dump(data, f_w, indent=4)
-
-    print("\t\t CHATTERS SAVED")
-    data = {}
-
-    scheduler.enter(SAVING_TIME, 1, save_chatters, (scheduler,))    # schedule the next saving
+stop_threads = False    # used to stop the threads, set to True when the scheduler calls save_and_restart()
 
 
-def get_channels() -> list:
-    #make a request to the twitch api to get the list of channels
-    url = "https://api.twitch.tv/helix/streams?language=it"
-    headers = {
-        "Authorization": AUTHORIZATION_TWITCH_API,
-        "Client-Id": CLIENT_ID
-    }
-
-    response = requests.get(url, headers=headers)
-    streamers = [x["user_name"].lower() for x in response.json()["data"]]
-
-    print(streamers)
-    return streamers
-
-
-def get_data_from_line(line: str):
+def get_data_from_line(line: str, channels_list: list) -> (str, str):
     line_list = line.split(";")
     for e in line_list:
         if "display-name" in e:
@@ -48,15 +21,16 @@ def get_data_from_line(line: str):
     # get channel name
     channel = line.split("#")[-1].split(" ")[0]
     if channel not in channels_list:
-        print(f"\n\n\n-------------------- {channel}")
+        print(f"\t\t {channel} not in channels_list")
         print(line)
-        print("-----------------------\n\n\n")
         return None, None
 
     return channel, username
 
 
-def listen_chat(channel: str):
+def listen_chat(channel: str, channels_list: list):
+    global data, stop_threads
+
     irc = socket.socket()
     irc.connect((SERVER, 6667)) #connects to the server
 
@@ -72,14 +46,13 @@ def listen_chat(channel: str):
     irc.send(('JOIN #' + channel + '\r\n').encode())
 
     readbuffer=""
-    while True:
+    while not stop_threads:
         readbuffer = readbuffer+irc.recv(1024).decode()
         taco = readbuffer.split("\n")
         readbuffer = taco.pop()
         for line in taco:
             if("PRIVMSG" in line):
-                channel, username = get_data_from_line(line)
-                # print(channel, username)
+                channel, username = get_data_from_line(line, channels_list)
 
                 if channel is None or username is None:
                     continue
@@ -92,24 +65,72 @@ def listen_chat(channel: str):
 
             elif("PING" in line):
                 irc.send(("PONG %s\r\n" % line[1]).encode())
-                print("\n\n\n\n\n ------------------- \n\n\n\n\n\n\n")
+                print(f"\t\tPONG {channel}")
+    
+    irc.close()
+    return
 
 
-def launch_threads(channels_list: list):
+def save_and_restart(scheduler, thread_list: list):
+    global data, stop_threads
+
+    # kill all the threads
+    print("\t\t KILLING THREADS (it may take a while)")
+    stop_threads = True
+    for t in thread_list:
+        t.join()
+    stop_threads = False
+
+    # save the data
+    filename = f"dumps/{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json"
+    print(f"\t\t SAVING CHATTERS IN {filename}")
+    with open(filename, "w") as f_w:
+        json.dump(data, f_w, indent=4)
+
+    data = {}   # clear the data
+
+    # restart the threads
+    print("\t\t RESTARTING THREADS")
+    thread_list = launch_threads()
+
+    scheduler.enter(RESTART_TIME, 1, save_and_restart, (scheduler, thread_list))    # schedule the next saving
+
+
+def get_channels() -> list:
+    #make a request to the twitch api to get the list of channels
+    url = f"https://api.twitch.tv/helix/streams?language=it&first={N_STREAMS}"
+    headers = {
+        "Authorization": AUTHORIZATION_TWITCH_API,
+        "Client-Id": CLIENT_ID
+    }
+
+    response = requests.get(url, headers=headers)
+    streamers = [x["user_name"].lower() for x in response.json()["data"]]   # save in lowercase because irc channel names are lowercase
+
+    print("\t\t chats to listen: ", streamers)
+    return streamers
+
+
+def launch_threads() -> list:
+    thread_list = []
+
+    channels_list = get_channels()
+
     # launch one thread for each channel
     for channel in channels_list:
-        t = threading.Thread(target=listen_chat, args=(channel,))
+        t = threading.Thread(target=listen_chat, args=(channel, channels_list))
         t.start()
+        thread_list.append(t)
 
+    return thread_list
 
-channels_list = get_channels()
 
 def main():
-    t = threading.Thread(target=launch_threads, args=((channels_list,)))
-    t.start()
+    thread_list = launch_threads()
 
+    # launch a scheduler to +++AAAAAAAAAAAAAAA+++
     my_scheduler = sched.scheduler(time.time, time.sleep)
-    my_scheduler.enter(SAVING_TIME, 1, save_chatters, (my_scheduler,))
+    my_scheduler.enter(RESTART_TIME, 1, save_and_restart, (my_scheduler, thread_list))
     my_scheduler.run()
 
 
