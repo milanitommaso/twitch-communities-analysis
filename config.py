@@ -4,7 +4,7 @@ BOT_OWNER = 'milanitommaso'
 NICK = 'milanitommaso'
 SERVER = 'irc.twitch.tv'
 N_STREAMS = 100
-RESTART_TIME = 60   #10 minutes
+RESTART_TIME = 600   #10 minutes
 
 # take the credentials from the json file
 try:

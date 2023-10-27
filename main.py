@@ -121,6 +121,7 @@ def launch_threads() -> list:
         t = threading.Thread(target=listen_chat, args=(channel, channels_list))
         t.start()
         thread_list.append(t)
+        time.sleep(0.5)     # wait to avoid the unsuccessful login error (probably for too many requests)
 
     return thread_list
 
