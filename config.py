@@ -5,6 +5,7 @@ NICK = 'milanitommaso'
 SERVER = 'irc.twitch.tv'
 N_STREAMS = 100
 RESTART_TIME = 600   #10 minutes
+KNOWN_BOTS = ['Nightbot', 'StreamElements', 'Streamlabs', 'Moobot', "Fossabot", "SonglistBot"]
 
 # take the credentials from the json file
 try:
@@ -16,4 +17,3 @@ try:
 except FileNotFoundError:
     print("credentials.json not found, please create it")
     exit(1)
-

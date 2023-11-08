@@ -29,6 +29,15 @@ def get_data_from_line(line: str, channels_list: list) -> (str, str):
     return channel, username
 
 
+def remove_known_bots():
+    global data
+    # remove known bots
+    for channel in data.keys():
+        for bot in KNOWN_BOTS:
+            if bot in data[channel]:
+                data[channel].remove(bot)
+
+
 class ListenChatThread(threading.Thread):
     """Thread class with a stop() method. The thread itself has to check
     regularly for the stopped() condition."""
@@ -108,7 +117,6 @@ def kill_threads(thread_list: list):
 def save_and_restart(scheduler, thread_list: list):
     global data, t_killer_thread
 
-
     print("\t\t KILLING THREADS")
     # wait if the killer thread of the previous iteration is still running
     if t_killer_thread is not None and t_killer_thread.is_alive():
@@ -123,6 +131,9 @@ def save_and_restart(scheduler, thread_list: list):
     # save the data
     filename = f"dumps/{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json"
     print(f"\t\t SAVING CHATTERS IN {filename}")
+    
+    remove_known_bots() # remove known bots
+    
     with open(filename, "w") as f_w:
         json.dump(data, f_w, indent=4)
 
