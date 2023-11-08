@@ -109,6 +109,7 @@ def kill_threads(thread_list: list):
     # kill all the threads
     for i, t in enumerate(thread_list):
         t.stop()
+        time.sleep(0.5)     # wait because when the thread was launched it waited 0.5 seconds from the previous thread
 
     # wait for all the threads to finish
     for i, t in enumerate(thread_list):
