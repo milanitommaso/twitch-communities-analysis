@@ -56,8 +56,8 @@ class ListenChatThread(threading.Thread):
 
     def stopped(self):
         return self._stop_event.is_set()
-    
-    def run(self):
+
+    def connect(self):
         irc = socket.socket()
         irc.settimeout(10)
         irc.connect((SERVER, 6667)) #connects to the server
@@ -72,6 +72,22 @@ class ListenChatThread(threading.Thread):
         irc.send(('raw CAP REQ :twitch.tv/membership\r\n').encode())
 
         irc.send(('JOIN #' + self.channel + '\r\n').encode())
+
+        return irc
+    
+    def run(self):
+        count = 0
+
+        irc = self.connect()
+        readbuffer = irc.recv(1024).decode()
+        while "Login unsuccessful" in readbuffer and count < 5:
+            time.sleep(0.3)
+            irc = self.connect()
+            count += 1
+
+        if count >= 5:
+            print(f"\t\t LOGIN UNSUCCESSFUL FOR {self.channel}")
+            return
 
         readbuffer=""
         while not self.stopped():
