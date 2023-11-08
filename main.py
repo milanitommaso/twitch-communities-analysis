@@ -13,17 +13,19 @@ t_killer_thread = None  # used to kill all the threads when the scheduler calls 
 
 
 def get_data_from_line(line: str, channels_list: list) -> (str, str):
+    username, channel = None, None
+
     line_list = line.split(";")
     for e in line_list:
         if "display-name" in e:
             username = e.split("=")[1]
     
-    # get channel name
-    channel = line.split("#")[-1].split(" ")[0]
+    # get the channel name, take the word after "PRIVMSG #" and before " :
+    channel = line.split("PRIVMSG #")[1].split(" :")[0]
     # check if the channel is in the list of channels to listen
     if channel not in channels_list:
-        # print(f"\t\t {channel} not in channels_list")
-        # print(line)
+        print(f"\t\t {channel} not in channels_list")
+        print("\t\t\n\n" , line, "\n\n")
         return None, None
 
     return channel, username
@@ -169,7 +171,6 @@ def launch_threads() -> list:
     # launch one thread for each channel
     print("\t\t LAUNCHING THREADS")
     for channel in channels_list:
-        # t = threading.Thread(target=listen_chat, args=(channel, channels_list))
         t = ListenChatThread(channel, channels_list)
         t.start()
         thread_list.append(t)
