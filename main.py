@@ -9,16 +9,20 @@ import datetime
 from config import *
 
 data = {}
-t_killer_thread = None  # used to kill all the threads when the scheduler calls save_and_restart()
 
 
 def get_data_from_line(line: str, channels_list: list) -> (str, str):
     username, channel = None, None
+    is_sub, is_mod = False, False
 
     line_list = line.split(";")
     for e in line_list:
         if "display-name" in e:
             username = e.split("=")[1]
+        elif "subscriber=" in e:
+            is_sub = e.split("=")[1] == "1"
+        elif "mod=" in e:
+            is_mod = e.split("=")[1] == "1"
     
     # get the channel name, take the word after "PRIVMSG #" and before " :
     channel = line.split("PRIVMSG #")[1].split(" :")[0]
@@ -28,7 +32,7 @@ def get_data_from_line(line: str, channels_list: list) -> (str, str):
         print("\t\t\n\n" , line, "\n\n")
         return None, None
 
-    return channel, username
+    return channel, username, is_sub, is_mod
 
 
 def remove_known_bots():
@@ -45,11 +49,11 @@ class ListenChatThread(threading.Thread):
     regularly for the stopped() condition."""
     global data
 
-    def __init__(self, channel:str, channels_list:list):
+    def __init__(self, channel:str, channels_info:list):
         super(ListenChatThread, self).__init__()
         self._stop_event = threading.Event()
         self.channel = channel
-        self.channels_list = channels_list
+        self.channels_list = channels_info
 
     def stop(self):
         self._stop_event.set()
@@ -59,7 +63,7 @@ class ListenChatThread(threading.Thread):
 
     def connect(self):
         irc = socket.socket()
-        irc.settimeout(10)
+        irc.settimeout(4)
         irc.connect((SERVER, 6667)) #connects to the server
 
         #sends variables for connection to twitch chat
@@ -81,8 +85,10 @@ class ListenChatThread(threading.Thread):
         irc = self.connect()
         readbuffer = irc.recv(1024).decode()
         while "Login unsuccessful" in readbuffer and count < 5:
+            irc.close()
             time.sleep(0.3)
             irc = self.connect()
+            readbuffer = irc.recv(1024).decode()
             count += 1
 
         if count >= 5:
@@ -102,16 +108,15 @@ class ListenChatThread(threading.Thread):
             readbuffer = taco.pop()
             for line in taco:
                 if("PRIVMSG" in line):
-                    c, username = get_data_from_line(line, self.channels_list)
+                    c, username, is_sub, is_mod = get_data_from_line(line, self.channels_list)
 
                     if c is None or username is None:
                         continue
-                    
-                    #save the channel and username
-                    if self.channel not in data.keys():
-                        data[self.channel] = []
-                    if username not in data[self.channel]:
-                        data[self.channel].append(username)
+
+                    if username in KNOWN_BOTS:
+                        continue
+                                        
+                    data[self.channel]["chatters"].append({"user": username, "is_sub": is_sub, "is_mod": is_mod})
 
                 elif("PING" in line):
                     irc.send(("PONG %s\r\n" % line[1]).encode())
@@ -125,7 +130,6 @@ def kill_threads(thread_list: list):
     # kill all the threads
     for i, t in enumerate(thread_list):
         t.stop()
-        time.sleep(0.5)     # wait because when the thread was launched it waited 0.5 seconds from the previous thread
 
     # wait for all the threads to finish
     for i, t in enumerate(thread_list):
@@ -134,18 +138,10 @@ def kill_threads(thread_list: list):
 
 
 def save_and_restart(scheduler, thread_list: list):
-    global data, t_killer_thread
+    global data
 
     print("\t\t KILLING THREADS")
-    # wait if the killer thread of the previous iteration is still running
-    if t_killer_thread is not None and t_killer_thread.is_alive():
-        print("\t\t WAITING FOR THE KILLER THREAD OF THE PREVIOUS ITERATION TO FINISH")
-    if t_killer_thread is not None:
-        t_killer_thread.join()
-
-    # launch a thread to join all the others threads
-    t_killer_thread = threading.Thread(target=kill_threads, args=(thread_list,))
-    t_killer_thread.start()
+    kill_threads(thread_list)
 
     # save the data
     filename = f"dumps/{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json"
@@ -156,8 +152,6 @@ def save_and_restart(scheduler, thread_list: list):
     with open(filename, "w") as f_w:
         json.dump(data, f_w, indent=4)
 
-    data = {}   # clear the data
-
     # restart the threads
     print("\t\t RESTARTING THREADS")
     thread_list = launch_threads()
@@ -165,7 +159,28 @@ def save_and_restart(scheduler, thread_list: list):
     scheduler.enter(RESTART_TIME, 1, save_and_restart, (scheduler, thread_list))    # schedule the next saving
 
 
-def get_channels() -> list:
+def launch_threads() -> list:
+    thread_list = []
+
+    channels_info = get_channels_info()
+    initialize_data(channels_info)
+
+    # pprint.pprint(data)
+
+    # launch one thread for each channel
+    print("\t\t LAUNCHING THREADS")
+    for channel in channels_info.keys():
+        t = ListenChatThread(channel, channels_info.keys())
+        t.start()
+        thread_list.append(t)
+        time.sleep(0.5)     # wait to avoid the unsuccessful login error (probably for too many requests)
+    
+    print("\t\t THREADS LAUNCHED")
+
+    return thread_list
+
+
+def get_channels_info() -> list:
     #make a request to the twitch api to get the list of channels
     url = f"https://api.twitch.tv/helix/streams?language=it&first={N_STREAMS}"
     headers = {
@@ -174,28 +189,26 @@ def get_channels() -> list:
     }
 
     response = requests.get(url, headers=headers)
-    streamers = [x["user_name"].lower() for x in response.json()["data"]]   # save in lowercase because irc channel names are lowercase
 
-    print("\t\t chats to listen: ", streamers)
-    return streamers
+    streamers_info = {}
+    for i in range(len(response.json()["data"])):
+        username_streamer = response.json()["data"][i]["user_name"].lower()
+        streamers_info[ username_streamer ] = {}
+        streamers_info[ username_streamer ]["game_name"] = response.json()["data"][i]["game_name"]
+        streamers_info[ username_streamer ]["viewer_count"] = response.json()["data"][i]["viewer_count"]
+
+    return streamers_info
 
 
-def launch_threads() -> list:
-    thread_list = []
+def initialize_data(channels_info):
+    global data
 
-    channels_list = get_channels()
-
-    # launch one thread for each channel
-    print("\t\t LAUNCHING THREADS")
-    for channel in channels_list:
-        t = ListenChatThread(channel, channels_list)
-        t.start()
-        thread_list.append(t)
-        time.sleep(0.5)     # wait to avoid the unsuccessful login error (probably for too many requests)
-    
-    print("\t\t THREADS LAUNCHED")
-
-    return thread_list
+    data = {}
+    for streamer in channels_info.keys():
+        data[streamer] = {}
+        data[streamer]["game_name"] = channels_info[streamer]["game_name"]
+        data[streamer]["viewer_count"] = channels_info[streamer]["viewer_count"]
+        data[streamer]["chatters"] = []
 
 
 def main():
