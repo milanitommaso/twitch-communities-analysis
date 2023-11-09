@@ -5,7 +5,7 @@ NICK = 'milanitommaso'
 SERVER = 'irc.twitch.tv'
 N_STREAMS = 100
 RESTART_TIME = 600   #10 minutes
-KNOWN_BOTS = ['Nightbot', 'StreamElements', 'Streamlabs', 'Moobot', "Fossabot", "SonglistBot"]
+KNOWN_BOTS = ['Nightbot', 'StreamElements', 'Streamlabs', 'Moobot', "Fossabot", "SonglistBot", "Wizebot"]
 
 # take the credentials from the json file
 try:
