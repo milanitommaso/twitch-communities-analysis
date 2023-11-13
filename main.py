@@ -145,6 +145,16 @@ def save_and_restart(scheduler, thread_list: list):
     print("\t\t KILLING THREADS")
     kill_threads(thread_list)
 
+    # get the new channels info
+    channels_info = get_channels_info()
+
+    # adjust the viewer count with the average of the previous and the new one
+    for channel in channels_info.keys():
+        if channel not in data.keys():
+            continue
+        else:
+            data[channel]["viewer_count"] = int((data[channel]["viewer_count"] + channels_info[channel]["viewer_count"]) / 2)
+
     # save the data
     filename = f"dumps/{datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')}.json"
     print(f"\t\t SAVING CHATTERS IN {filename}")
@@ -156,18 +166,17 @@ def save_and_restart(scheduler, thread_list: list):
 
     # restart the threads
     print("\t\t RESTARTING THREADS")
-    thread_list = launch_threads()
+    thread_list = launch_threads(channels_info)
 
     scheduler.enter(RESTART_TIME, 1, save_and_restart, (scheduler, thread_list))    # schedule the next saving
 
 
-def launch_threads() -> list:
+def launch_threads(channels_info = None) -> list:
     thread_list = []
 
-    channels_info = get_channels_info()
+    if channels_info is None:   # if the channels info are not passed as argument, get them
+        channels_info = get_channels_info()
     initialize_data(channels_info)
-
-    # pprint.pprint(data)
 
     # launch one thread for each channel
     print("\t\t LAUNCHING THREADS")
