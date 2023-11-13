@@ -115,12 +115,14 @@ class ListenChatThread(threading.Thread):
 
                     if username in KNOWN_BOTS:
                         continue
-                                        
-                    data[self.channel]["chatters"].append({"user": username, "is_sub": is_sub, "is_mod": is_mod})
+
+                    if data[self.channel]["chatters"].get(username) is None:
+                        data[self.channel]["chatters"][username] = {"is_sub": is_sub, "is_mod": is_mod, "count_messages": 1}
+                    else:
+                        data[self.channel]["chatters"][username]["count_messages"] += 1
 
                 elif("PING" in line):
                     irc.send(("PONG %s\r\n" % line[1]).encode())
-                    # print(f"\t\tPONG {self.channel}")
         
         irc.close()
         return
@@ -208,7 +210,7 @@ def initialize_data(channels_info):
         data[streamer] = {}
         data[streamer]["game_name"] = channels_info[streamer]["game_name"]
         data[streamer]["viewer_count"] = channels_info[streamer]["viewer_count"]
-        data[streamer]["chatters"] = []
+        data[streamer]["chatters"] = {}
 
 
 def main():
