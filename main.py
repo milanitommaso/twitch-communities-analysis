@@ -146,6 +146,8 @@ class ListenChatThread(threading.Thread):
                 self.socket_irc.recv(1024).decode()
             except socket.timeout:
                 pass
+            except UnicodeDecodeError:
+                pass
             time.sleep(0.1)
         
         self.start_listen()
