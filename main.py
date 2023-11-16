@@ -7,6 +7,7 @@ import json
 import datetime
 
 from config import *
+from notify_telegram import notify_error as notify_error
 
 data = {}
 
@@ -261,4 +262,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        notify_error(e)
+        print("ERROR")
