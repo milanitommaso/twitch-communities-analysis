@@ -52,8 +52,10 @@ class ListenChatThread(threading.Thread):
     def __init__(self, channel:str, channels_info:list):
         super(ListenChatThread, self).__init__()
         self._stop_event = threading.Event()
+        self._listen_ready = threading.Event()
         self.channel = channel
         self.channels_list = channels_info
+        self.socket_irc = None
 
     def stop(self):
         self._stop_event.set()
@@ -61,9 +63,15 @@ class ListenChatThread(threading.Thread):
     def stopped(self):
         return self._stop_event.is_set()
 
+    def set_ready(self):
+        self._listen_ready.set()
+
+    def is_ready(self):
+        return self._listen_ready.is_set()
+
     def connect(self):
+        # print(f"\t\t CONNECTING TO {self.channel}")
         irc = socket.socket()
-        irc.settimeout(4)
         irc.connect((SERVER, 6667)) #connects to the server
 
         #sends variables for connection to twitch chat
@@ -79,26 +87,13 @@ class ListenChatThread(threading.Thread):
 
         return irc
     
-    def run(self):
-        count = 0
-
-        irc = self.connect()
-        readbuffer = irc.recv(1024).decode()
-        while "Login unsuccessful" in readbuffer and count < 5:
-            irc.close()
-            time.sleep(0.3)
-            irc = self.connect()
-            readbuffer = irc.recv(1024).decode()
-            count += 1
-
-        if count >= 5:
-            print(f"\t\t LOGIN UNSUCCESSFUL FOR {self.channel}")
-            return
+    def start_listen(self):
+        # print(f"\t\t START LISTENING {self.channel}")
 
         readbuffer=""
         while not self.stopped():
             try:
-                readbuffer = readbuffer+irc.recv(1024).decode() 
+                readbuffer = readbuffer + self.socket_irc.recv(1024).decode() 
             except socket.timeout:
                 pass
             except UnicodeDecodeError:
@@ -122,10 +117,38 @@ class ListenChatThread(threading.Thread):
                         data[self.channel]["chatters"][username]["count_messages"] += 1
 
                 elif("PING" in line):
-                    irc.send(("PONG %s\r\n" % line[1]).encode())
+                    self.socket_irc.send(("PONG %s\r\n" % line[1]).encode())
         
-        irc.close()
+        self.socket_irc.close()
         return
+
+    def run(self):
+        irc = self.connect()
+        readbuffer = irc.recv(1024).decode()
+        count = 0
+        while "Login unsuccessful" in readbuffer and count < 5:
+            irc.close()
+            time.sleep(0.3)
+            irc = self.connect()
+            readbuffer = irc.recv(1024).decode()
+            count += 1
+
+        if count >= 5:
+            print(f"\t\t LOGIN UNSUCCESSFUL FOR {self.channel}")
+            return
+
+        self.socket_irc = irc
+        self.socket_irc.settimeout(4)
+
+        while self.is_ready() is False:
+            # throw away the messages until the thread is ready
+            try:
+                self.socket_irc.recv(1024).decode()
+            except socket.timeout:
+                pass
+            time.sleep(0.1)
+        
+        self.start_listen()
 
 
 def kill_threads(thread_list: list):
@@ -185,6 +208,10 @@ def launch_threads(channels_info = None) -> list:
         t.start()
         thread_list.append(t)
         time.sleep(0.5)     # wait to avoid the unsuccessful login error (probably for too many requests)
+
+    # now that all the threads are launched, set the ready flag to start listening to the chat
+    for t in thread_list:
+        t.set_ready()
     
     print("\t\t THREADS LAUNCHED")
 
