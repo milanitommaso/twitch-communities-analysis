@@ -1,3 +1,4 @@
+import random
 import socket
 import threading
 import sched
@@ -60,7 +61,9 @@ def check_channels(threads: dict):
             t.start()
             time.sleep(0.5) # wait to avoid login unsuccessful error for too many requests
             print(f"> Thread started for channel {channel}")
-        elif channel not in channels_list:
+
+    for channel in threads.keys():
+        if channel not in channels_list:
             threads[channel].decrease_keep_channel_count()
             print(f"> Decrease keep channel count for channel {channel}")
         else:
@@ -72,6 +75,15 @@ def check_channels(threads: dict):
             threads[channel].join()
             del threads[channel]
             print(f"> Thread stopped for channel {channel}")
+
+    # decrease the ttl of the threads
+    for channel in list(threads.keys()):
+        error = threads[channel].decrease_ttl()
+        if error == -1:
+            threads[channel].join()
+            del threads[channel]
+            print(f"> Unsuccessful login for {channel}")
+            notify_error(f"Unsuccessful login for {channel} during reload of the irc connection")
 
     # schedule the next check
     sched_check_channels = sched.scheduler(time.time, time.sleep)
@@ -100,16 +112,22 @@ def get_data_from_line(line: str, channels_list: list) -> (str, int, int, str, s
             is_mod = int(e.split("=")[1] == "1")
     
     # get the channel name, take the word after "PRIVMSG #" and before " :"
-    channel = line.split("PRIVMSG #")[1].split(" :")[0]
+    try:
+        channel = line.split("PRIVMSG #")[1].split(" :")[0]
+    except:
+        channel = None
 
     # check if the channel is in the list of channels to listen
-    if channel not in [x.lower() for x in channels_list]:
+    if channel is None or channel not in [x.lower() for x in channels_list]:
         print(f"\t\t CHANNEL {channel} NOT IN THE LIST OF CHANNELS TO LISTEN")
         return None, None, None, None, None
 
     # get the message
-    message = "".join(line.split("PRIVMSG #")[1].split(" :")[1]).strip()
-
+    try:
+        message = "".join(line.split("PRIVMSG #")[1].split(" :")[1]).strip()
+    except:
+        message = None
+    
     return timestamp, is_mod, is_sub, username, message
 
 
@@ -123,6 +141,8 @@ class ListenChatThread(threading.Thread):
         self.socket_irc = None
         self.chat_log = ""
         self.log_filename = f"downloaded_chats/{channel}/chat_{datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S')}.txt"
+        self._reloading_irc_connection = threading.Event()
+        self.ttl = int(RELOAD_IRC_CONNECTION_TIME / CHECK_CHANNELS_TIME * random.uniform(0.6, 1.2)) # randomize the ttl to avoid all the threads to reload the connection at the same time
 
     def set_stop(self):
         self._stop_event.set()
@@ -139,6 +159,22 @@ class ListenChatThread(threading.Thread):
         if self.keep_channel_count <= 0:
             self.set_stop()
 
+    def set_reloading_irc_connection(self):
+        self._reloading_irc_connection.set()
+
+    def clear_reloading_irc_connection(self):
+        self._reloading_irc_connection.clear()
+
+    def is_reloading_irc_connection(self):
+        return self._reloading_irc_connection.is_set()
+
+    def decrease_ttl(self):
+        self.ttl -= 1
+
+        if self.ttl <= 0:
+            ret = self.reload_irc_connection()
+            return ret
+        
     def save_chat_log(self):
         # check if the folder exists
         if not os.path.exists(f"downloaded_chats/{self.channel}"):
@@ -147,6 +183,35 @@ class ListenChatThread(threading.Thread):
         with open(self.log_filename, "a") as f:
             f.write(self.chat_log)
         self.chat_log = ""
+
+    def reload_irc_connection(self):
+        print(f"> Reloading irc connection for {self.channel}")
+        self.set_reloading_irc_connection()     # set the flag to avoid the thread to listen the chat while reloading the connection
+
+        time.sleep(5.5)   # wait that the thread pause the listening of the chat
+
+        self.socket_irc.close()
+
+        self.socket_irc = self.connect()    # set the new irc socket
+        self.ttl = int(RELOAD_IRC_CONNECTION_TIME / CHECK_CHANNELS_TIME * random.uniform(0.6, 1.2)) # randomize the ttl to avoid all the threads to reload the connection at the same time
+
+        readbuffer = self.socket_irc.recv(1024).decode()
+        count = 0
+        while "Login unsuccessful" in readbuffer and count < 15:
+            self.socket_irc.close()
+            time.sleep(random.uniform(0.5, 3))    # randomize the sleep to avoid all the threads to reload the connection at the same time
+            self.socket_irc = self.connect()
+            readbuffer = self.socket_irc.recv(1024).decode()
+            count += 1
+
+        if count >= 15:
+            self.socket_irc.close()
+            return -1
+        
+        self.socket_irc.settimeout(5)
+
+        self.clear_reloading_irc_connection()   # clear the flag to allow the thread to listen the chat
+        print(f"> Reloaded irc connection for {self.channel}")
 
     def connect(self):
         # print(f"\t\t CONNECTING TO {self.channel}")
@@ -169,6 +234,10 @@ class ListenChatThread(threading.Thread):
     def start_listen(self):
         readbuffer = ""
         while not self.is_stopped():
+            if self.is_reloading_irc_connection():  # wait for the connection to be ready, used for the reload of the irc connection
+                time.sleep(0.)
+                continue
+
             try:
                 readbuffer = self.socket_irc.recv(1024).decode() 
             except socket.timeout:
@@ -191,25 +260,26 @@ class ListenChatThread(threading.Thread):
 
             readbuffer = ""
         
-        self.socket_irc.close()
-        return
+        if self.is_stopped():
+            self.socket_irc.close()
+            return
     
     def run(self):
-        irc = self.connect()
-        readbuffer = irc.recv(1024).decode()
+        self.socket_irc = self.connect()
+        readbuffer = self.socket_irc.recv(1024).decode()
         count = 0
         while "Login unsuccessful" in readbuffer and count < 5:
-            irc.close()
+            self.socket_irc.close()
             time.sleep(0.5)
-            irc = self.connect()
-            readbuffer = irc.recv(1024).decode()
+            self.socket_irc = self.connect()
+            readbuffer = self.socket_irc.recv(1024).decode()
             count += 1
 
         if count >= 5:
-            print(f"\t\t LOGIN UNSUCCESSFUL FOR {self.channel}")
+            print(f"> Login unsuccessful {self.channel}")
+            self.socket_irc.close()
             return
 
-        self.socket_irc = irc
         self.socket_irc.settimeout(5)
         
         self.start_listen()
@@ -226,10 +296,11 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        pass
-    except Exception as e:
-        notify_error(e)
-        print("ERROR")
+    main()
+    # try:
+    #     main()
+    # except KeyboardInterrupt:
+    #     pass
+    # except Exception as e:
+    #     notify_error(e)
+    #     print("ERROR")

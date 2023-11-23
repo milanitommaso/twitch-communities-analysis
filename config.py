@@ -6,6 +6,7 @@ SERVER = 'irc.twitch.tv'
 N_STREAMS = 200
 CHECK_CHANNELS_TIME = 600
 KEEP_CHANNEL_COUNT = 3
+RELOAD_IRC_CONNECTION_TIME = 10800    # 3 hours
 KNOWN_BOTS = ['Nightbot', 'StreamElements', 'Streamlabs', 'Moobot', "Fossabot", "SonglistBot", "Wizebot"]
 
 # take the credentials from the json file
