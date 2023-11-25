@@ -235,7 +235,7 @@ class ListenChatThread(threading.Thread):
         readbuffer = ""
         while not self.is_stopped():
             if self.is_reloading_irc_connection():  # wait for the connection to be ready, used for the reload of the irc connection
-                time.sleep(0.)
+                time.sleep(0.3)
                 continue
 
             try:
