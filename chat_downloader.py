@@ -39,7 +39,7 @@ def start_threads(channels_list: list) -> dict:
         t = ListenChatThread(channel, channels_list)
         threads_dict[channel] = t
         t.start()
-        time.sleep(0.5) # wait to avoid login unsuccessful error for too many requests
+        time.sleep(0.7) # wait to avoid login unsuccessful error for too many requests
 
     print("> Threads launched")
 
@@ -82,8 +82,6 @@ def check_channels(threads: dict):
         if error == -1:
             threads[channel].join()
             del threads[channel]
-            print(f"> Unsuccessful login for {channel}")
-            notify_error(f"Unsuccessful login for {channel} during reload of the irc connection")
 
     # schedule the next check
     sched_check_channels = sched.scheduler(time.time, time.sleep)
@@ -119,7 +117,6 @@ def get_data_from_line(line: str, channels_list: list) -> (str, int, int, str, s
 
     # check if the channel is in the list of channels to listen
     if channel is None or channel not in [x.lower() for x in channels_list]:
-        print(f"\t\t CHANNEL {channel} NOT IN THE LIST OF CHANNELS TO LISTEN")
         return None, None, None, None, None
 
     # get the message
@@ -197,15 +194,17 @@ class ListenChatThread(threading.Thread):
 
         readbuffer = self.socket_irc.recv(1024).decode()
         count = 0
-        while "Login unsuccessful" in readbuffer and count < 15:
+        while "Login unsuccessful" in readbuffer and count <= 15:
             self.socket_irc.close()
             time.sleep(random.uniform(0.5, 3))    # randomize the sleep to avoid all the threads to reload the connection at the same time
             self.socket_irc = self.connect()
             readbuffer = self.socket_irc.recv(1024).decode()
             count += 1
 
-        if count >= 15:
+        if count > 15 and "Login unsuccessful" in readbuffer:
             self.socket_irc.close()
+            print(f"> Login unsuccessful during reload irc connection {self.channel}")
+            notify_error(f"Unsuccessful login during reload irc connection for {self.channel}")
             return -1
         
         self.socket_irc.settimeout(5)
@@ -268,15 +267,16 @@ class ListenChatThread(threading.Thread):
         self.socket_irc = self.connect()
         readbuffer = self.socket_irc.recv(1024).decode()
         count = 0
-        while "Login unsuccessful" in readbuffer and count < 5:
+        while "Login unsuccessful" in readbuffer and count <= 10:
             self.socket_irc.close()
-            time.sleep(0.5)
+            time.sleep(0.7)
             self.socket_irc = self.connect()
             readbuffer = self.socket_irc.recv(1024).decode()
             count += 1
 
-        if count >= 5:
+        if count > 10 and "Login unsuccessful" in readbuffer:
             print(f"> Login unsuccessful {self.channel}")
+            notify_error(f"Unsuccessful login for {self.channel}")
             self.socket_irc.close()
             return
 
