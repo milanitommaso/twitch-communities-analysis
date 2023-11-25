@@ -296,11 +296,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    # try:
-    #     main()
-    # except KeyboardInterrupt:
-    #     pass
-    # except Exception as e:
-    #     notify_error(e)
-    #     print("ERROR")
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(e)
+        notify_error(e)
