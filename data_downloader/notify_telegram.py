@@ -3,7 +3,7 @@ from telegram.ext import Updater
 
 
 def notify_error(exception: Exception):
-    with open('telegram_data.json') as data:
+    with open('data_downloader/telegram_data.json') as data:
         telegram_data = data.read()
     telegram_data = json.loads(telegram_data)
 

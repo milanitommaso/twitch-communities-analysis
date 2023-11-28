@@ -11,7 +11,7 @@ KNOWN_BOTS = ['Nightbot', 'StreamElements', 'Streamlabs', 'Moobot', "Fossabot", 
 
 # take the credentials from the json file
 try:
-    with open('credentials.json') as json_file:
+    with open('data_downloader/credentials.json') as json_file:
         data = json.load(json_file)
         PASSWORD = data['password_irc']
         AUTHORIZATION_TWITCH_API = data['authorization_twitch_api']
