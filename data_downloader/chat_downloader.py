@@ -7,6 +7,7 @@ import requests
 import json
 import datetime
 import os
+import traceback
 
 from config import *
 from notify_telegram import notify_error as notify_error
@@ -204,7 +205,7 @@ class ListenChatThread(threading.Thread):
         if count > 15 and "Login unsuccessful" in readbuffer:
             self.socket_irc.close()
             print(f"> Login unsuccessful during reload irc connection {self.channel}")
-            notify_error(f"Unsuccessful login during reload irc connection for {self.channel}")
+            notify_error(f"chat_downloader.py - Unsuccessful login during reload irc connection for {self.channel}")
             return -1
         
         self.socket_irc.settimeout(5)
@@ -276,7 +277,7 @@ class ListenChatThread(threading.Thread):
 
         if count > 10 and "Login unsuccessful" in readbuffer:
             print(f"> Login unsuccessful {self.channel}")
-            notify_error(f"Unsuccessful login for {self.channel}")
+            notify_error(f"chat_downloader.py - Unsuccessful login for {self.channel}")
             self.socket_irc.close()
             return
 
@@ -301,5 +302,7 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        print(e)
-        notify_error(e)
+        tb = traceback.format_exc()
+        print(tb)
+        tg_message = f"Error in chat_downloader.py\n{tb}"
+        notify_error(tg_message)

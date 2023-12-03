@@ -1,4 +1,4 @@
-import requests, time, datetime
+import requests, time, datetime, traceback
 
 from config import *
 from notify_telegram import notify_error as notify_error
@@ -56,8 +56,10 @@ def main():
         except KeyboardInterrupt:
             return
         except Exception as e:
-            print(e)
-            notify_error(e)
+            tb = traceback.format_exc()
+            print(tb)
+            tg_message = f"Error in streams_info.py\n{tb}"
+            notify_error(tg_message)
 
         time.sleep(60)    # every minute
 
