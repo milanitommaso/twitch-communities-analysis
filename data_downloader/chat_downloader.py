@@ -195,9 +195,9 @@ class ListenChatThread(threading.Thread):
 
         readbuffer = self.socket_irc.recv(1024).decode()
         count = 0
-        while "Login unsuccessful" in readbuffer and count <= 15:
+        while "Login unsuccessful" in readbuffer and count <= 20:
             self.socket_irc.close()
-            time.sleep(random.uniform(0.5, 3))    # randomize the sleep to avoid all the threads to reload the connection at the same time
+            time.sleep(random.uniform(0.5, 5))    # randomize the sleep to avoid all the threads to reload the connection at the same time
             self.socket_irc = self.connect()
             readbuffer = self.socket_irc.recv(1024).decode()
             count += 1
@@ -239,11 +239,18 @@ class ListenChatThread(threading.Thread):
                 continue
 
             try:
-                readbuffer = self.socket_irc.recv(1024).decode() 
+                readbuffer = self.socket_irc.recv(1024).decode()
+                count_timeout = 0
             except socket.timeout:
-                pass
+                count_timeout += 1
             except UnicodeDecodeError:
                 pass
+
+            if count_timeout >= 30 and not self.is_reloading_irc_connection() and self.keep_channel_count == KEEP_CHANNEL_COUNT:
+                # print(f"> Reload irc connection after 30 timeouts for {self.channel}")
+                self.reload_irc_connection()
+                count_timeout = 0
+                continue
 
             lines = readbuffer.split("\n")
             for line in lines:
