@@ -202,7 +202,7 @@ class ListenChatThread(threading.Thread):
             readbuffer = self.socket_irc.recv(1024).decode()
             count += 1
 
-        if count > 15 and "Login unsuccessful" in readbuffer:
+        if count > 20 and "Login unsuccessful" in readbuffer:
             self.socket_irc.close()
             print(f"> Login unsuccessful during reload irc connection {self.channel}")
             notify_error(f"chat_downloader.py - Unsuccessful login during reload irc connection for {self.channel}")
