@@ -6,28 +6,36 @@ from notify_telegram import notify_error as notify_error
 
 def save_streams_info():
     #make a request to the twitch api to get the list of channels
+    live_info_list = []
     url = f"https://api.twitch.tv/helix/streams?language=it&first=100"
+
     headers = {
         "Authorization": AUTHORIZATION_TWITCH_API,
         "Client-Id": CLIENT_ID
     }
 
     response = requests.get(url, headers=headers)
-    cursor = response.json()["pagination"]["cursor"]
 
-    live_info_list = []
-    for live in response.json()["data"]:
-        if live["viewer_count"] > 5 and live["user_name"] not in [x["user_name"] for x in live_info_list]:
-            live_info_list.append({"user_name": live["user_name"], "category": live["game_name"], "viewer_count": live["viewer_count"]})
+    try:
+        cursor = response.json()["pagination"]["cursor"]
+
+        for live in response.json()["data"]:
+            if live["viewer_count"] > 5 and live["user_name"] not in [x["user_name"] for x in live_info_list]:
+                live_info_list.append({"user_name": live["user_name"], "category": live["game_name"], "viewer_count": live["viewer_count"]})
+    except:
+        return -1
 
     # if there are more streams, make another request
     while cursor is not None:
         url = f"https://api.twitch.tv/helix/streams?language=it&first=100&after={cursor}"
         response = requests.get(url, headers=headers)
 
-        for live in response.json()["data"]:
-            if live["viewer_count"] > 5 and live["user_name"] not in [x["user_name"] for x in live_info_list]:
-                live_info_list.append({"user_name": live["user_name"], "category": live["game_name"], "viewer_count": live["viewer_count"]})
+        try:
+            for live in response.json()["data"]:
+                if live["viewer_count"] > 5 and live["user_name"] not in [x["user_name"] for x in live_info_list]:
+                    live_info_list.append({"user_name": live["user_name"], "category": live["game_name"], "viewer_count": live["viewer_count"]})
+        except:
+            return -1
 
         if "cursor" not in response.json()["pagination"]:
             break
@@ -50,9 +58,22 @@ def save_streams_info():
 
 def main():
     print("> Started saving streams info every minute")
+
+    count_err_decode_response = 0
+
     while True:
         try:
-            save_streams_info()
+            ret = save_streams_info()
+            if ret == -1:
+                count_err_decode_response += 1
+            else:
+                count_err_decode_response = 0
+            
+            if count_err_decode_response >= 5:
+                tg_message = f"Error in streams_info.py\nError decoding response"
+                print("> " + tg_message)
+                notify_error(tg_message)
+                count_err_decode_response = 0
         except KeyboardInterrupt:
             return
         except Exception as e:
