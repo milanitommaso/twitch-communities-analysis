@@ -1,0 +1,22 @@
+{
+    "streamer1": [
+        "chatter1",
+        "chatter2",
+        "chatter3"
+    ],
+    "streamer2": [
+        "chatter4",
+        "chatter4",
+        "chatter5",
+        "chatter6",
+        "chatter7",
+        "chatter8"
+    ],
+    "stremer3": [
+        "chatter9",
+        "chatter10",
+        "chatter11",
+        "chatter3",
+        "chatter4"
+    ]
+}
