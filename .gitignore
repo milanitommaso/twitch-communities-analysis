@@ -2,6 +2,8 @@ credentials.json
 telegram_data.json
 downloaded_chats/*
 streams_info/*
+chatters/*
+analysis_scripts/get_chatters.json
 
 .vscode/
 .DS_Store
