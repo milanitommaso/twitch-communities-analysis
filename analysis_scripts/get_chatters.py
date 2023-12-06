@@ -80,6 +80,8 @@ def download_chatters():
         current_start_datetime += timedelta(hours=1)
         current_end_datetime += timedelta(hours=1)
 
+    current_end_datetime -= timedelta(hours=1)  # remove the last increment
+
     # save the last datetime processed
     with open('analysis_scripts/get_chatters.json', 'w') as f:
         json.dump({"last_end_datetime": current_end_datetime.strftime('%Y-%m-%d %H-%M-%S')}, f, indent=4)
