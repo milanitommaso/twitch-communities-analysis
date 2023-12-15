@@ -8,6 +8,7 @@ CHECK_CHANNELS_TIME = 600
 KEEP_CHANNEL_COUNT = 3
 RELOAD_IRC_CONNECTION_TIME = 10800    # 3 hours
 KNOWN_BOTS = ['Nightbot', 'StreamElements', 'Streamlabs', 'Moobot', "Fossabot", "SonglistBot", "Wizebot"]
+ALLOWED_USERNOTICE = ['sub', 'resub', 'subgift', 'submysterygift', 'giftpaidupgrade', 'rewardgift', 'anongiftpaidupgrade', 'raid']
 
 # take the credentials from the json file
 try:

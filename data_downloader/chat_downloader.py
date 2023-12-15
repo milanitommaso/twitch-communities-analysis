@@ -48,8 +48,8 @@ def start_threads(channels_list: list) -> dict:
 
 
 def check_channels(threads: dict):
-    # before checking the channels save the chat logs
-    save_chat_logs(threads)
+    # before checking the channels save the chat and event logs
+    save_logs(threads)
 
     print("> Checking channels")
     # check if the channels are still in the list of channels to listen
@@ -90,13 +90,14 @@ def check_channels(threads: dict):
     sched_check_channels.run()
 
 
-def save_chat_logs(threads: dict):
-    print("> Saving chat logs")
+def save_logs(threads: dict):
+    print("> Saving chat and event logs")
     for channel in threads.keys():
         threads[channel].save_chat_log()
+        threads[channel].save_event_log()
 
 
-def get_data_from_line(line: str, channels_list: list) -> (str, int, int, str, str):
+def get_data_from_line_privmsg(line: str, channels_list: list) -> (str, int, int, str, str):
     timestamp, is_sub, is_mod, username, message = None, None, None, None, None
 
     timestamp = datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S")
@@ -129,6 +130,43 @@ def get_data_from_line(line: str, channels_list: list) -> (str, int, int, str, s
     return timestamp, is_mod, is_sub, username, message
 
 
+def get_data_from_line_usernotice(line: str, channels_list: list) -> (str, str, int, str):
+    timestamp, event_type, raid_viewer_count, username = None, None, None, None
+
+    timestamp = datetime.datetime.now().strftime("%y-%m-%d_%H-%M-%S")
+
+    # get the event type
+    line_list = line.split(";")
+    for e in line_list:
+        if "msg-id" == e.split("=")[0]:
+            event_type = e.split("=")[1]
+
+    # if event is a raid take the number of viewers
+    if event_type == "raid":
+        for e in line_list:
+            if "msg-param-viewerCount" == e.split("=")[0]:
+                raid_viewer_count = int(e.split('=')[1])
+    if event_type == "raid" and raid_viewer_count is None:
+        return None, None, None, None
+
+    # get the channel name, take the word after "USERNOTICE #" and before " :"
+    try:
+        channel = line.split("USERNOTICE #")[1].split(" :")[0].strip()
+    except:
+        channel = None
+    
+    # check if the channel is in the list of channels to listen
+    if channel is None or channel not in [x.lower() for x in channels_list]:
+        return None, None, None, None
+
+    # get the username
+    for e in line_list:
+        if "display-name" == e.split("=")[0]:
+            username = e.split("=")[1]
+
+    return timestamp, event_type, raid_viewer_count, username
+
+
 class ListenChatThread(threading.Thread):
     def __init__(self, channel:str, channels_info:list):
         super(ListenChatThread, self).__init__()
@@ -138,7 +176,8 @@ class ListenChatThread(threading.Thread):
         self.channels_list = channels_info
         self.socket_irc = None
         self.chat_log = ""
-        self.log_filename = f"downloaded_chats/{channel}/chat_{datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S')}.txt"
+        self.event_log = ""
+        self.chat_log_filename = f"downloaded_chats/{channel}/chat_{datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S')}.txt"
         self._reloading_irc_connection = threading.Event()
         self.ttl = int(RELOAD_IRC_CONNECTION_TIME / CHECK_CHANNELS_TIME * random.uniform(0.6, 1.2)) # randomize the ttl to avoid all the threads to reload the connection at the same time
 
@@ -178,9 +217,15 @@ class ListenChatThread(threading.Thread):
         if not os.path.exists(f"downloaded_chats/{self.channel}"):
             os.makedirs(f"downloaded_chats/{self.channel}")
 
-        with open(self.log_filename, "a") as f:
+        with open(self.chat_log_filename, "a") as f:
             f.write(self.chat_log)
         self.chat_log = ""
+
+    def save_event_log(self):
+        if self.event_log != "":
+            with open(f"downloaded_events/{self.channel}.txt", "a") as f:
+                f.write(self.event_log)
+            self.event_log = ""
 
     def reload_irc_connection(self):
         print(f"> Reloading irc connection for {self.channel}")
@@ -239,15 +284,15 @@ class ListenChatThread(threading.Thread):
                 continue
 
             try:
-                readbuffer = self.socket_irc.recv(1024).decode()
+                readbuffer = self.socket_irc.recv(10240).decode()
                 count_timeout = 0
             except socket.timeout:
                 count_timeout += 1
             except UnicodeDecodeError:
                 pass
 
-            if count_timeout >= 30 and not self.is_reloading_irc_connection() and self.keep_channel_count == KEEP_CHANNEL_COUNT:
-                # print(f"> Reload irc connection after 30 timeouts for {self.channel}")
+            if count_timeout >= 60 and not self.is_reloading_irc_connection() and self.keep_channel_count == KEEP_CHANNEL_COUNT:
+                # print(f"> Reload irc connection after 60 timeouts (5 minutes) for {self.channel}")
                 self.reload_irc_connection()
                 count_timeout = 0
                 continue
@@ -255,12 +300,29 @@ class ListenChatThread(threading.Thread):
             lines = readbuffer.split("\n")
             for line in lines:
                 if "PRIVMSG" in line:
-                    timestamp, is_mod, is_sub, username, message = get_data_from_line(line, self.channels_list)
+                    timestamp, is_mod, is_sub, username, message = get_data_from_line_privmsg(line, self.channels_list)
 
                     if timestamp is None or is_mod is None or is_sub is None or username is None or message is None:
                         continue
 
                     self.chat_log += f"{timestamp}\t{is_mod}\t{is_sub}\t{username}\t{message}\n"
+
+                elif "USERNOTICE" in line:
+                    timestamp, event_type, raid_viewer_count, username = get_data_from_line_usernotice(line, self.channels_list)
+
+                    if timestamp is None or event_type is None or username is None:
+                        continue
+
+                    if event_type not in ALLOWED_USERNOTICE:
+                        continue
+
+                    if event_type == "raid" and raid_viewer_count is None:
+                        continue
+
+                    if event_type == "raid":
+                        self.event_log += f"{timestamp}\t{event_type}\t{username}\t{raid_viewer_count}\n"
+                    else:
+                        self.event_log += f"{timestamp}\t{event_type}\t{username}\n"
 
                 elif "PING" in line:
                     self.socket_irc.send(("PONG :tmi.twitch.tv\r\n").encode())
