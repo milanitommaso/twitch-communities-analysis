@@ -283,6 +283,7 @@ class ListenChatThread(threading.Thread):
                 time.sleep(0.3)
                 continue
 
+            count_timeout = 0
             try:
                 readbuffer = self.socket_irc.recv(10240).decode()
                 count_timeout = 0
