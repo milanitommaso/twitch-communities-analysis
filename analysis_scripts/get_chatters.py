@@ -46,30 +46,32 @@ def download_chatters():
                 if datetime.strptime(f.split('.')[0].replace("chat_", ""), '%y-%m-%d_%H-%M-%S') > current_end_datetime:
                     continue
 
-                with open(os.path.join('downloaded_chats', d, f), 'r', encoding='utf-8') as file:
+                try:
+                    with open(os.path.join('downloaded_chats', d, f), 'r', encoding='utf-8') as file:
+                        lines = file.readlines()
+                        # if the last message is before the start datetime, skip the file
+                        try:
+                            last_line = lines[-1]
+                        except:
+                            continue
+                        last_ts = last_line.split('\t')[0]
+                        if datetime.strptime(last_ts, '%y-%m-%d_%H-%M-%S') < current_start_datetime:
+                            continue
 
-                    lines = file.readlines()
-                    # if the last message is before the start datetime, skip the file
-                    try:
-                        last_line = lines[-1]
-                    except:
-                        continue
-                    last_ts = last_line.split('\t')[0]
-                    if datetime.strptime(last_ts, '%y-%m-%d_%H-%M-%S') < current_start_datetime:
-                        continue
+                        for line in lines:
+                            # get the timestamp of the message
+                            ts = line.split('\t')[0]
+                            # get the chatter
+                            chatter = line.split('\t')[3]
 
-                    for line in lines:
-                        # get the timestamp of the message
-                        ts = line.split('\t')[0]
-                        # get the chatter
-                        chatter = line.split('\t')[3]
-
-                        # if the timestamp is in the hour, save the chatter
-                        if current_start_datetime <= datetime.strptime(ts, '%y-%m-%d_%H-%M-%S') and datetime.strptime(ts, '%y-%m-%d_%H-%M-%S') <= current_end_datetime:
-                            if d not in chatters:
-                                chatters[d] = []
-                            if chatter not in chatters[d]:
-                                chatters[d].append(chatter)
+                            # if the timestamp is in the hour, save the chatter
+                            if current_start_datetime <= datetime.strptime(ts, '%y-%m-%d_%H-%M-%S') and datetime.strptime(ts, '%y-%m-%d_%H-%M-%S') <= current_end_datetime:
+                                if d not in chatters:
+                                    chatters[d] = []
+                                if chatter not in chatters[d]:
+                                    chatters[d].append(chatter)
+                except:
+                    print(f"> Error processing file {f}")
 
         # save the chatters in a file
         filename = "chatters/" + current_start_datetime.strftime('%Y%m%d_%H%M') + '.json'
