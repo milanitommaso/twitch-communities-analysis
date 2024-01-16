@@ -15,5 +15,10 @@ def notify_error(message: str):
     updater = Updater(bot_token)
 
     # Send the message to the Telegram bot
-    updater.bot.send_message(chat_id, message)
-    print("> error message sent to telegram")
+    try:
+        updater.bot.send_message(chat_id, message)
+        print("> error message sent to telegram")
+    except:
+        # take only the last 4000 characters of the message
+        updater.bot.send_message(chat_id, message[-4000:])
+        print("> error message sent to telegram")
