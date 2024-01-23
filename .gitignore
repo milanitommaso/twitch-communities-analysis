@@ -1,6 +1,7 @@
 credentials.json
 telegram_data.json
 downloaded_chats/*
+downloaded_events/*
 streams_info/*
 chatters/*
 analysis_scripts/get_chatters.json
