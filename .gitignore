@@ -5,6 +5,8 @@ downloaded_events/*
 streams_info/*
 chatters/*
 analysis_scripts/get_chatters.json
+lives.txt
+analysis_results/*
 
 .vscode/
 .DS_Store
