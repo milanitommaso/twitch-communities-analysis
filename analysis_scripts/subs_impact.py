@@ -8,6 +8,18 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', "data_downloader")
 from config import *
 
 
+def get_top_streamers(number_of_streamers):
+    top_streamers = []
+
+    with open('top_streamers.txt', 'r') as f:
+        lines = f.readlines()[0:number_of_streamers]
+
+    for l in lines:
+        top_streamers.append(l.strip())
+
+    return top_streamers
+
+
 def get_timestamp_from_filename(filename):
     return datetime.datetime.strptime(filename, "chat_%y-%m-%d_%H-%M-%S.txt")
 
@@ -16,8 +28,14 @@ def get_chats_dataframes_to_analyze(directory: str):
     chats_dataframes = {}   # key: channel name, value: dataframes
     lives = []
 
+    # get the 250 top streamers, because we can't analyze all the streamers
+    top_streamers = get_top_streamers(number_of_streamers=250)
+
     # get all the dirs where there are the chat files
     channel_dirs = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
+
+    # take only the dirs of the top streamers
+    channel_dirs = [d for d in channel_dirs if d in top_streamers]
 
     # for every dir get the dataframes of the live streaming chat, a live streaming could have more than one chat file
 
@@ -73,7 +91,7 @@ def get_dataframe_from_chat_file(chat_filename):
     try:
         chat_df = pd.read_csv(chat_filename, sep='\t', names=['timestamp', 'is_mod', 'is_sub', 'user', 'message'])
     except:
-        print("Error reading file: ", chat_filename)
+        # print("Error reading file: ", chat_filename)
         return chat_df
 
     # delete the rows where the user is in the bot list
@@ -108,6 +126,45 @@ def get_subscribers_impact(df, subscribers_messages_count):
     return impact
 
 
+def get_total_impact(saved_impacts):
+    top_streamers = get_top_streamers(number_of_streamers=50)
+
+    # get the impact for every channel
+    for channel_name in saved_impacts:
+        if channel_name == 'total':
+            continue
+        saved_impacts[channel_name] = round(((sum(saved_impacts[channel_name]) / len(saved_impacts[channel_name])) * 100), 2)
+    
+    # get the average impact
+    sum_impact = 0
+    count = 0
+    for channel_name in saved_impacts:
+        if saved_impacts[channel_name] != 0:
+            sum_impact += saved_impacts[channel_name]
+            count += 1
+
+    saved_impacts['total'] = round((sum_impact / count), 2)
+
+    # get the average impact only for top 50 streamers
+    sum_impact = 0
+    count = 0
+    for channel_name in saved_impacts:
+        if saved_impacts[channel_name] != 0 and channel_name in top_streamers:
+            sum_impact += saved_impacts[channel_name]
+            count += 1
+
+    saved_impacts['total_top_streamers'] = round((sum_impact / count), 2)
+
+    # sort the channels by name
+    saved_impacts = {k: v for k, v in sorted(saved_impacts.items(), key=lambda item: item[0])}
+
+    # move the totals impact to the start
+    saved_impacts = {'total': saved_impacts['total'], **saved_impacts}
+    saved_impacts = {'total_top_streamers': saved_impacts['total_top_streamers'], **saved_impacts}
+
+    return saved_impacts
+
+
 def main():
     saved_impacts = {}
     chats_dataframes = {}   # key: channel name, value: dataframes
@@ -133,32 +190,10 @@ def main():
 
     bar.finish()
 
-    # get the total impact
-    sum_impact = 0
-    count = 0
-    for channel_name in saved_impacts:
-        if sum(saved_impacts[channel_name]) != 0:
-            sum_impact += sum(saved_impacts[channel_name])
-            count += len(saved_impacts[channel_name])
-
-    saved_impacts['total'] = '%.2f'%((sum_impact / count) * 100)
-
-    # get the average impact for every channel
-    for channel_name in saved_impacts:
-        if channel_name == 'total':
-            continue
-        saved_impacts[channel_name] = '%.2f'%((sum(saved_impacts[channel_name]) / len(saved_impacts[channel_name])) * 100)
-
-    # sort the channels by name
-    saved_impacts = {k: v for k, v in sorted(saved_impacts.items(), key=lambda item: item[0])}
-
-    # move the total impact to the start
-    saved_impacts = {'total': saved_impacts['total'], **saved_impacts}
-
-    print(saved_impacts)
+    saved_impacts = get_total_impact(saved_impacts)
 
     # save the impacts in json
-    with open('subscirbers_impact.json', 'w') as f:
+    with open('analysis_results/subscirbers_impact.json', 'w') as f:
         json.dump(saved_impacts, f, indent=4)
 
 

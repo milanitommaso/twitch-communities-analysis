@@ -10,7 +10,7 @@ from config import *
 TOP_N_CHATTERS = [10, 50, 100]
 
 
-def get_top_streamers(number_of_streamers=50):
+def get_top_streamers(number_of_streamers):
     top_streamers = []
 
     with open('top_streamers.txt', 'r') as f:
@@ -30,8 +30,14 @@ def get_chats_dataframes_to_analyze(directory: str):
     chats_dataframes = {}   # key: channel name, value: dataframes
     lives = []
 
+    # get the 250 top streamers, because we can't analyze all the streamers
+    top_streamers = get_top_streamers(number_of_streamers=250)
+
     # get all the dirs where there are the chat files
     channel_dirs = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
+
+    # take only the dirs of the top streamers
+    channel_dirs = [d for d in channel_dirs if d in top_streamers]
 
     # for every dir get the dataframes of the live streaming chat, a live streaming could have more than one chat file
 
@@ -63,7 +69,7 @@ def get_chats_dataframes_to_analyze(directory: str):
 
 
         # for every live get the chat files and concat all the dataframes in one
-        live_df = pd.DataFrame(columns=['timestamp', 'is_mod', 'is_sub', 'user', 'message'])
+        live_df = pd.DataFrame(columns=['user'])
         for live in lives_to_analyze:
             for c in live:
                 live_df = pd.concat([live_df, get_dataframe_from_chat_file(os.path.join(directory, d, c))])
@@ -86,9 +92,8 @@ def get_dataframe_from_chat_file(chat_filename):
     # read the csv file
     try:
         chat_df = pd.read_csv(chat_filename, sep='\t', names=['timestamp', 'is_mod', 'is_sub', 'user', 'message'])
-        chat_df = chat_df[['timestamp', 'user']]
     except:
-        print("Error reading file: ", chat_filename)
+        # print("Error reading file: ", chat_filename)
         return chat_df
 
     # delete the rows where the user is in the bot list
@@ -134,7 +139,7 @@ def get_top_contributors_impact(chat_df, top_contributors):
 def get_total_impact(saved_impacts):
     # saved_impacts = {channel_name: {top10: [impact1, impact2, ...], top50:[impact3, impact4]}, ...}
 
-    top_streamers = get_top_streamers()
+    top_streamers = get_top_streamers(number_of_streamers=50)
 
     for channel_name in saved_impacts:
         for top_n in saved_impacts[channel_name]:
