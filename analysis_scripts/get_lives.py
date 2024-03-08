@@ -60,5 +60,5 @@ def process_files(input_directory, output_file):
 
 if __name__ == '__main__':
     input_directory = 'streams_info'
-    output_file = 'out.txt'
+    output_file = 'lives.txt'
     process_files(input_directory, output_file)
