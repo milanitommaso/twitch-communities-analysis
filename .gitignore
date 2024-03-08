@@ -7,6 +7,8 @@ chatters/*
 analysis_scripts/get_chatters.json
 lives.txt
 analysis_results/*
+top_streamers.txt
+downloaded_emotes.json
 
 .vscode/
 .DS_Store
