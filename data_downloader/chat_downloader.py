@@ -104,7 +104,7 @@ def get_data_from_line_privmsg(line: str, channels_list: list) -> (str, int, int
 
     line_list = line.split(";")
     for e in line_list:
-        if "display-name" in e:
+        if "display-name=" in e and "reply" not in e:
             username = e.split("=")[1]
         elif "subscriber=" in e:
             is_sub = int(e.split("=")[1] == "1")
