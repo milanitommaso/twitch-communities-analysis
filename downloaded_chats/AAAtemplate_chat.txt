@@ -1,1 +1,0 @@
-timestamp\tis_mod\tsi_sub\tmessage

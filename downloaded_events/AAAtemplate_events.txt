@@ -1,1 +1,0 @@
-timestamp\tevent_type\tusername
