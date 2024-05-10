@@ -1,9 +1,12 @@
 import os
 import json
+from datetime import datetime
 import progressbar
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', "data_downloader"))
 from config import *
+
+MONTHS = ["december","january","february","march"]
 
 
 def get_top_streamers(number_of_streamers):
@@ -42,6 +45,8 @@ def get_emote_ratio(top_streamers: list):
         chats_filenames = os.listdir(f'downloaded_chats/{channel}')
         chats_filenames = [filename for filename in chats_filenames if "template" not in filename]
 
+        chats_filenames = [x for x in chats_filenames if datetime.strptime(x.split("_")[1], '%y-%m-%d').strftime('%B').lower() in MONTHS]
+
         bar = progressbar.ProgressBar(maxval=len(chats_filenames), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
         bar.start()
 
@@ -78,7 +83,8 @@ def get_emote_ratio(top_streamers: list):
                 curr_emotes = list(set(curr_emotes))
 
                 for emote in curr_emotes:
-                    if emote in message:
+                    message = message.strip()
+                    if message.startswith(emote) or message.endswith(emote) or " "+emote+" " in message:
                         emote_ratio[channel] += 1
                         break
 

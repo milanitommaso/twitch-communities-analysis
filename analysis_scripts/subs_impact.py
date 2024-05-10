@@ -1,11 +1,12 @@
 import pandas as pd
 import os
-import json
 import progressbar
 import sys
 import datetime
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', "data_downloader"))
 from config import *
+
+MONTHS = ["december","january","february","march"]
 
 
 def get_top_streamers(number_of_streamers):
@@ -28,8 +29,8 @@ def get_chats_dataframes_to_analyze(directory: str):
     chats_dataframes = {}   # key: channel name, value: dataframes
     lives = []
 
-    # get the 250 top streamers, because we can't analyze all the streamers
-    top_streamers = get_top_streamers(number_of_streamers=250)
+    # get the 60 top streamers, because we can't analyze all the streamers
+    top_streamers = get_top_streamers(number_of_streamers=60)
 
     # get all the dirs where there are the chat files
     channel_dirs = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
@@ -46,7 +47,9 @@ def get_chats_dataframes_to_analyze(directory: str):
         lines = f.readlines()
 
     for l in lines:
-        lives.append([l.split('\t')[0], l.split('\t')[1], l.split('\t')[2].strip()])
+        # check that the end of the live is in a month in MONTHS
+        if datetime.datetime.strptime(l.split('\t')[2].split(' ')[0], "%Y-%m-%d").strftime('%B').lower() in MONTHS:
+            lives.append([l.split('\t')[0], l.split('\t')[1], l.split('\t')[2].strip()])
 
     bar = progressbar.ProgressBar(maxval=len(channel_dirs), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
     bar.start()
@@ -192,9 +195,14 @@ def main():
 
     saved_impacts = get_total_impact(saved_impacts)
 
-    # save the impacts in json
-    with open('analysis_results/subscirbers_impact.json', 'w') as f:
-        json.dump(saved_impacts, f, indent=4)
+    # save the impacts in a csv file, only for top 60 streamers
+    top_streamers = get_top_streamers(number_of_streamers=60)
+    with open('analysis_results/subscribers_impact.csv', 'w') as f:
+        f.write("channel\timpact\n")
+        f.write(f"total\t{saved_impacts['total']}\n")
+        f.write(f"total_top_streamers\t{saved_impacts['total_top_streamers']}\n")
+        for channel_name in top_streamers:
+            f.write(f"{channel_name}\t{saved_impacts[channel_name]}\n")
 
 
 if __name__ == "__main__":

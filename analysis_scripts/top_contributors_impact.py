@@ -1,12 +1,12 @@
 import pandas as pd
 import os
-import json
 import progressbar
 import sys
 import datetime
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', "data_downloader"))
 from config import *
 
+MONTHS = ["december","january","february","march"]
 TOP_N_CHATTERS = [10, 50, 100]
 
 
@@ -30,8 +30,8 @@ def get_chats_dataframes_to_analyze(directory: str):
     chats_dataframes = {}   # key: channel name, value: dataframes
     lives = []
 
-    # get the 250 top streamers, because we can't analyze all the streamers
-    top_streamers = get_top_streamers(number_of_streamers=250)
+    # get the 60 top streamers, because we can't analyze all the streamers
+    top_streamers = get_top_streamers(number_of_streamers=60)
 
     # get all the dirs where there are the chat files
     channel_dirs = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
@@ -48,7 +48,9 @@ def get_chats_dataframes_to_analyze(directory: str):
         lines = f.readlines()
 
     for l in lines:
-        lives.append([l.split('\t')[0], l.split('\t')[1], l.split('\t')[2].strip()])
+        # check that the end of the live is in a month in MONTHS
+        if datetime.datetime.strptime(l.split('\t')[2].split(' ')[0], "%Y-%m-%d").strftime('%B').lower() in MONTHS:
+            lives.append([l.split('\t')[0], l.split('\t')[1], l.split('\t')[2].strip()])
 
     bar = progressbar.ProgressBar(maxval=len(channel_dirs), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
     bar.start()
@@ -139,8 +141,6 @@ def get_top_contributors_impact(chat_df, top_contributors):
 def get_total_impact(saved_impacts):
     # saved_impacts = {channel_name: {top10: [impact1, impact2, ...], top50:[impact3, impact4]}, ...}
 
-    top_streamers = get_top_streamers(number_of_streamers=50)
-
     for channel_name in saved_impacts:
         for top_n in saved_impacts[channel_name]:
             saved_impacts[channel_name][top_n] = sum(saved_impacts[channel_name][top_n]) / len(saved_impacts[channel_name][top_n])
@@ -162,9 +162,10 @@ def get_total_impact(saved_impacts):
     saved_impacts['total'] = average_impacts
 
     # get the average impact only for top 50 streamers
+    top_50_streamers = get_top_streamers(number_of_streamers=50)
     average_impacts_top_streamers = {}
     for channel_name in saved_impacts:
-        if channel_name not in top_streamers:
+        if channel_name not in top_50_streamers:
             continue
 
         for top_n in saved_impacts[channel_name]:
@@ -178,14 +179,18 @@ def get_total_impact(saved_impacts):
 
     saved_impacts['total_top_streamers'] = average_impacts_top_streamers
 
-    # sort the channels by name
-    saved_impacts = {k: v for k, v in sorted(saved_impacts.items(), key=lambda item: item[0])}
+    # order the dictionary using the order of top streamers
+    top_60_streamers = get_top_streamers(number_of_streamers=60)
+    saved_impacts_ordered = {}
+    for streamer in top_60_streamers:
+        if streamer in saved_impacts:
+            saved_impacts_ordered[streamer] = saved_impacts[streamer]
 
     # move the totals impact to the start
-    saved_impacts = {'total': saved_impacts['total'], **saved_impacts}
-    saved_impacts = {'total_top_streamers': saved_impacts['total_top_streamers'], **saved_impacts}
+    saved_impacts_ordered = {'total': saved_impacts['total'], **saved_impacts_ordered}
+    saved_impacts_ordered = {'total_top_streamers': saved_impacts['total_top_streamers'], **saved_impacts_ordered}
 
-    return saved_impacts
+    return saved_impacts_ordered
 
 
 def main():
@@ -224,9 +229,15 @@ def main():
     
     saved_impacts = get_total_impact(saved_impacts)
 
-    # save the impacts in json
-    with open('analysis_results/top_contributors_impact.json', 'w') as f:
-        json.dump(saved_impacts, f, indent=4)
+    # save the impacts in a csv file
+    with open('analysis_results/top_contributors_impact.csv', 'w') as file:
+        file.write("channel_name\ttop10\ttop50\ttop100\n")
+
+        for i, channel_name in enumerate(saved_impacts):
+            file.write(channel_name)
+            for top_n in saved_impacts[channel_name]:
+                file.write("\t" + str(saved_impacts[channel_name][top_n]))
+            file.write("\n")
 
 
 if __name__ == "__main__":
