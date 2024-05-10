@@ -1,0 +1,130 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+        <meta name="description" content="" />
+        <meta name="author" content="" />
+        <title>TwitchItalia Insights</title>
+        <!-- Favicon-->
+        <link rel="icon" type="image/x-icon" href="{{url_for('static', filename='img/graph-icon.png')}}" />
+        <!-- Font Awesome icons (free version)-->
+        <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+        <!-- Google fonts-->
+        <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css" />
+        <link href="https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic" rel="stylesheet" type="text/css" />
+        <!-- Core theme CSS (includes Bootstrap)-->
+        <link href="{{url_for('static', filename='styles/styles.css')}}" rel="stylesheet" />
+        <!-- import jquery -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+        <!-- import chartjs -->
+        <script src= "https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.umd.min.js"> </script> 
+
+    </head>
+    <body id="page-top">
+        <!-- Navigation-->
+        <nav class="navbar navbar-expand-lg bg-secondary text-uppercase fixed-top" id="mainNav">
+            <div class="container">
+                <a class="navbar-brand" href="/">TwitchItalia Insights</a>
+                <button class="navbar-toggler text-uppercase font-weight-bold bg-primary text-white rounded" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+                    Menu
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarResponsive">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded" id="header-graph" href="/graph/description">Graph</a></li>
+                        <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded" id="header-stats" href="/stats">Stats</a></li>
+                        <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded" id="header-special-analyses" href="/special-analyses">Special Analyses</a></li>
+                        <li class="nav-item mx-0 mx-lg-1"><a class="nav-link py-3 px-0 px-lg-3 rounded" id="header-about" href="/about">About</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <br>
+        
+        <!-- CONTENT -->
+        <section class="page-section bg-primary">
+            <div class="container text-white mt-4">
+                <h1 class="text-center">Analysis Description</h1>
+        
+                <p class="lead">{{analysis_description[0]}}</p>
+                <p class="lead">{{analysis_description[1]}}</p>
+            </div>
+        </section>
+        
+        <section class="page-section">
+            <div class="container">
+        
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="list-group">
+                            {% for v in all_versions %}
+                                {% if v == current_version[0] %}
+                                    <a href="?v={{v}}" class="list-group-item list-group-item-action active">{{all_versions[v]}}</a>
+                                {% else %}
+                                    <a href="?v={{v}}" class="list-group-item list-group-item-action">{{all_versions[v]}}</a>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+        
+                        {% block content %}{% endblock %}
+        
+                    </div>
+                </div>
+        
+            </div>
+        
+        </section>
+        <!-- END CONTENT -->
+
+
+
+
+
+        <br>
+
+        <!-- Footer-->
+        <footer class="footer text-center">
+            <div class="container">
+                <div class="row">
+                    <!-- Footer Contacts-->
+                    <div class="col-lg mb-5 mb-lg-0">
+                        <h4 class="text-uppercase mb-4">Contact me</h4>
+                        <p class="lead mb-0">
+                            Have an idea for a new analysis or want to share something exciting? I'd love to hear from you! Get in touch to propose new analyses, share feedback, or discuss any other ideas you have in mind.
+                        </p>
+                        <p>
+                            You can view all my contact information <a href="https://milanitommaso.com/contact" target="_blank">Here.</a> Or you can send me an  <a href="mailto:milani.tommaso2004@gmail.com">email.</a>
+                        </p>
+                    </div>
+
+                    <!-- Footer About Me-->
+                    <!-- <div class="col-lg-6">
+                        <h4 class="text-uppercase mb-4">About me</h4>
+                        <p class="lead mb-0">
+                            Lorem ipsum dolor sit amet consectetur adipisicing elit. Laboriosam excepturi consequatur fugit adipisci nulla explicabo maiores incidunt ducimus illo officia quaerat, magni possimus fuga consequuntur ipsam sequi mollitia. In, porro.
+                            <a href="http://milanitommaso.com" target="_blank">milanitommaso.com</a>
+                        </p>
+                    </div> -->
+                </div>
+            </div>
+        </footer>
+
+        <!-- Others Section-->
+        <div class="copyright py-4 text-center text-white">
+            <div class="container"><small>This website is not affiliated with Twitch - Website template by <a href="https://startbootstrap.com" target="_blank">Start Bootstrap</a> </small></div>
+        </div>
+
+        <!-- Bootstrap core JS-->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+        <!-- Core theme JS-->
+        <script src="{{url_for('static', filename='js/scripts.js')}}"></script>
+
+    </body>
+</html>
+
+

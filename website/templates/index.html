@@ -1,0 +1,173 @@
+{%extends "layout.html"%}
+{%block content%}
+
+
+<!-- import jquery -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+
+<!-- import chartjs -->
+<script src= "https://cdn.jsdelivr.net/npm/chart.js@4.0.1/dist/chart.umd.min.js"> </script> 
+
+<!-- Masthead-->
+<header class="masthead bg-primary text-white text-center">
+    <div class="container d-flex align-items-center flex-column">
+        <!-- Masthead Heading-->
+        <h1 class="masthead-heading mb-0">Some Live Stats</h1>
+        <!-- Icon Divider-->
+        <div class="divider-custom divider-light">
+            <div class="divider-custom-line"></div>
+        </div>
+
+        <div class="row b">
+            <div class="col text-capitalize">
+                <h3> {{live_stats.current_users}} </h3>
+                <p>Current users on Twitch Italy</p>
+            </div>
+            <div class="col text-capitalize">
+                <h3> {{live_stats.current_lives}} </h3>
+                <p>Current Italian Lives</p>
+            </div>
+            <div class="col text-capitalize">
+                <h3> {{live_stats.messages_last_hour}} </h3>
+                <p>messages sent on the last hour</p>
+            </div>
+        </div>
+
+    </div>
+</header>
+
+<!-- Website info Section -->
+<section class="page-section">
+    <div class="container text-center">
+        <h2 class="page-section-heading text-center text-capitalize mb-3">What is this website?</h2>
+        <p class="lead">Lorem ipsum dolor sit amet consectetur adipisicing elit. Necessitatibus dolorem harum, illo aspernatur aliquid quam dolore illum possimus earum provident vitae repudiandae nostrum, enim blanditiis praesentium, labore distinctio minus beatae.</p>
+    </div>
+</section>
+
+<!-- Graph Section-->
+<section class="page-section bg-secondary portfolio mb-0" style="padding: 2rem 0;">
+    <div class="container">
+        <!-- Portfolio Section Heading-->
+        <h2 class="page-section-heading text-center text-uppercase text-white mb-0">Graph</h2>
+
+        <!-- Portfolio Grid Items-->
+        <div class="row justify-content-center">
+
+            <!-- text column -->
+            <div class="col-sm-6 mt-5">
+                <p class="lead text-white text-center">Lorem ipsum dolor sit amet consectetur adipisicing elit. Necessitatibus dolorem harum, illo aspernatur aliquid quam dolore illum possimus earum provident vitae repudiandae nostrum, enim blanditiis praesentium, labore distinctio minus beatae.</p>
+                <p><a href="/graph/description">Go to graph page</a></p>
+            </div>
+
+            <!-- image column -->
+            <div class="col-sm-6 text-center">
+                <img src="{{url_for('static', filename='img/graph.png')}}" alt="graph image" width="60%">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Some stats Section-->
+<section class="page-section">
+    <div class="container">
+        <!-- Some stats Section Heading-->
+        <h2 class="page-section-heading text-center text-uppercase">Some Stats</h2>
+
+        <p class="lead"> To see all the stats go to the <a href="/stats">stats page</a></p>
+
+        <!-- Some stats Section Content-->
+        <div class="row mt-5">
+            <div class="card" style="width: 100%;">
+                <div class="card-body">
+                    <h4 class="card-title text-capitalize">Most Watched By Timeslots</h4>
+                    <h5 class="card-subtitle mb-2 text-body-secondary text-capitalize">Last 7 days</h5>
+                    <div class="row mb-3">
+                        <div class="col-sm-3">
+                            <h6 class="text-center text-capitalize">Morning (07-13)</h6>
+                            <ol class="list-group list-group-numbered list-group-flush">
+                                <li class="list-group-item">{{most_watched_by_timeslots.morning[0]}}</li>
+                                <li class="list-group-item">{{most_watched_by_timeslots.morning[1]}}</li>
+                                <li class="list-group-item">{{most_watched_by_timeslots.morning[2]}}</li>
+                            </ol>
+                        </div>
+                        <div class="col-sm-3">
+                            <h6 class="text-center text-capitalize">Afternoon (13-19)</h6>
+                            <ol class="list-group list-group-numbered list-group-flush">
+                                <li class="list-group-item">{{most_watched_by_timeslots.afternoon[0]}}</li>
+                                <li class="list-group-item">{{most_watched_by_timeslots.afternoon[1]}}</li>
+                                <li class="list-group-item">{{most_watched_by_timeslots.afternoon[2]}}</li>
+                            </ol>
+                        </div>
+                        <div class="col-sm-3">
+                            <h6 class="text-center text-capitalize">Evening (19-01)</h6>
+                            <ol class="list-group list-group-numbered list-group-flush">
+                                <li class="list-group-item">{{most_watched_by_timeslots.evening[0]}}</li>
+                                <li class="list-group-item">{{most_watched_by_timeslots.evening[1]}}</li>
+                                <li class="list-group-item">{{most_watched_by_timeslots.evening[2]}}</li>
+                            </ol>
+                        </div>
+                        <div class="col-sm-3">
+                            <h6 class="text-center text-capitalize">Night (01-07)</h6>
+                            <ol class="list-group list-group-numbered list-group-flush">
+                                <li class="list-group-item">{{most_watched_by_timeslots.night[0]}}</li>
+                                <li class="list-group-item">{{most_watched_by_timeslots.night[1]}}</li>
+                                <li class="list-group-item">{{most_watched_by_timeslots.night[2]}}</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <a href="/stats/most-watched-by-timeslots" class="card-link">Go to the complete analysis</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-5">
+            <div class="col-lg-4 mb-3">
+                <div class="card" style="width: 100%;">
+                    <div class="card-body">
+                        <h4 class="card-title text-capitalize">Turnout</h4>
+                        <h5 class="card-subtitle mb-2 text-body-secondary text-capitalize">{{version[1]}}</h5>
+
+                        <canvas id="turnout_chart" style="width:100%;max-width:1000px;display: inline-block;"></canvas>
+
+                        <a href="/stats/turnout" class="card-link">Go to the complete analysis</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-3">
+                <div class="card" style="width: 100%;">
+                    <div class="card-body">
+                        <h4 class="card-title text-capitalize">Watched Channels</h4>
+                        <h5 class="card-subtitle mb-2 text-body-secondary text-capitalize">{{version[1]}}</h5>
+
+                        <canvas id="watched_channels_chart" style="width:100%;max-width:1000px;display: inline-block;"></canvas>
+
+                        <a href="/stats/watched-channels" class="card-link">Go to the complete analysis</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-3">
+                <div class="card" style="width: 100%;">
+                    <div class="card-body">
+                        <h4 class="card-title text-capitalize">Emotes Ratio</h4>
+                        <h5 class="card-subtitle mb-2 text-body-secondary text-capitalize">{{version[1]}}</h5>
+
+                        <canvas id="emotes_ratio_chart" style="width:100%;max-width:1000px;display: inline-block;"></canvas>
+
+                        <a href="/stats/emotes-ratio" class="card-link">Go to the complete analysis</a>
+                    </div>
+                </div>
+            </div>
+        </div> 
+    </div>
+</section>
+
+
+<script src= "{{url_for('static', filename='js/index.js')}}"> </script> 
+<script>
+    get_data('turnout', '{{version[0]}}');
+    get_data('watched-channels', '{{version[0]}}');
+    get_data('emotes-ratio', '{{version[0]}}');
+</script>
+
+{%endblock%}

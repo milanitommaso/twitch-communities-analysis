@@ -10,6 +10,10 @@ analyses_and_data/analysis_results/*
 analyses_and_data/top_streamers.txt
 analyses_and_data/downloaded_emotes.json
 
+website/static/analyses_results/*
+website/static/graphs/*
+website/tca-websiteenv/*
+
 .vscode/
 .DS_Store
 

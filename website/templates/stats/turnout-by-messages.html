@@ -1,0 +1,119 @@
+{%extends "stats/layout_stats.html"%}
+{%block content%}
+
+
+<h1 class="text-center mb-4">Turnout Messages</h1>
+
+<div class="row">
+    <div class="col">
+        <canvas id="turnout_chart" style="width:100%;max-width:1000px;display: inline-block;"></canvas>
+    </div>
+
+</div>
+
+
+<script>
+    document.title = 'Turnout By Messages - TwitchItalia Insights';
+
+    // get the data
+    get_data('{{stat}}', '{{current_version[0]}}');
+
+    function get_data(stat, version) {
+        // make a request with ajax
+        $.ajax({
+            url: '/get_stat_data/' + stat + '/' + version,
+            type: 'GET',
+            success: function(result) {
+                // check if the verion has been found
+                if (result == 'not found') {
+                    alert('Version not found');
+                    return;
+                }
+                
+                // create the charts
+                create_chart(result);
+
+            },
+            error: function(error) {
+                alert("error")
+                console.log(error);
+            }
+            
+        });
+    }
+
+    function create_chart(result) {
+
+        //result = {"00:00": {"monday": 1000, "tuesday":1500, ...}, "01:00": {"monday": 1000, "tuesday":1500, ...}, ...}
+
+        // get the data
+        xValues = Object.keys(result);
+
+        data = {"monday": [], "tuesday": [], "wednesday": [], "thursday": [], "friday": [], "saturday": [], "sunday": []};
+
+        // get a list of number of viewers for each day of the week
+        for (let i = 0; i < xValues.length; i++) {
+            for (const [key, value] of Object.entries(result[xValues[i]])) {
+                data[key].push(value);
+            }
+        }
+
+        console.log(data);
+
+        new Chart('turnout_chart', {
+            type: "line",
+            data: {
+                labels: xValues,
+
+                datasets: [{
+                        data: data["monday"],
+                        borderColor: "green",
+                        fill: false,
+                        label: 'Monday'
+                    },
+                    {
+                        data: data["tuesday"],
+                        borderColor: "blue",
+                        fill: false,
+                        label: 'Tuesday'
+                    },
+                    {
+                        data: data["wednesday"],
+                        borderColor: "red",
+                        fill: false,
+                        label: 'Wednesday'
+                    },
+                    {
+                        data: data["thursday"],
+                        borderColor: "yellow",
+                        fill: false,
+                        label: 'Thursday'
+                    },
+                    {
+                        data: data["friday"],
+                        borderColor: "purple",
+                        fill: false,
+                        label: 'Friday'
+                    },
+                    {
+                        data: data["saturday"],
+                        borderColor: "orange",
+                        fill: false,
+                        label: 'Saturday'
+                    },
+                    {
+                        data: data["sunday"],
+                        borderColor: "pink",
+                        fill: false,
+                        label: 'Sunday'
+                    }
+            
+                ]
+            },
+            options: {}
+        });
+    }
+
+</script>
+
+{%endblock%}

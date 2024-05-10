@@ -1,0 +1,52 @@
+{%extends "layout.html"%}
+{%block content%}
+
+<!-- set to active the link in the navbar -->
+<script>
+    document.getElementById("header-graph").classList.add("active");
+    document.title = "Graph - TwitchItalia Insights";
+</script>
+
+<section class="page-section">
+
+    <div class="container">
+        <div class="row">
+            <!-- graphs list column -->
+            <div class="col-md-5">
+
+                <div class="page-section">
+                    <h2>Graphs List</h2>
+                    <ul>
+                        {%for graph in graphs%}
+                            <li><a href="/graph?v={{graphs[graph]}}">{{graph}}</a></li>
+                        {%endfor%}
+                    </ul>
+                </div>
+
+            </div>
+            <div class="col-md-7 page-section">
+                <div class="row">
+                        <div class="col-md-6">
+                            <h2>How to read the Graph</h2>
+                            <p class="lead">Each node in the graph represents a streamer, while the links between nodes indicate the chatter in common between the connected streamers. In other words, if two nodes are connected by an arc, it means that they share a portion of their viewer audience. </p>
+                            <p class="lead">The use of colors to distinguish the various Twitch communities provides a clear view of the affinities and connections within the network of Italian streamers.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <img src="{{url_for('static', filename='img/graph_example.png')}}" alt="graph image" width="80%">
+                        </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="">
+                        <h2>Tecnical Description</h2>
+                        <p class="lead">To determine the relative connectedness between streamers, a hybrid approach was taken that takes into account both the number of shared users and the number of messages sent by those shared users. This method involved creating a detailed list of each channel's chatters, with each chatter represented as many times as the number of hours it participated in the streamer's chat. These lists were then intersected to assess common interactions between streamers.</p>
+                        <p class="lead">For the creation of the graph, Gephi software was used. In particular, the Force Atlas 2 spatialization algorithm was applied, which allowed the nodes of the graph to be positioned in such a way as to maximize the clarity of the relationships between streamers. This approach made possible a dynamic and intuitive visualization of the complex network of interactions among Italian streamers on Twitch.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+
+{%endblock%}

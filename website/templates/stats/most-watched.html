@@ -1,0 +1,93 @@
+{%extends "stats/layout_stats.html"%}
+{%block content%}
+
+
+<h1 class="text-center mb-4">Most Watched</h1>
+
+<div class="row">
+    <div class="col-lg-6">
+        <h3>Morning (07 - 13)</h3>
+        <canvas id="most_watched_chart_morning" style="width:100%;max-width:500px;display: inline-block;"></canvas>
+    </div>
+    
+    <div class="col-lg-6">
+        <h3>Afternoon (13 - 19)</h3>
+        <canvas id="most_watched_chart_afternoon" style="width:100%;max-width:500px;display: inline-block;"></canvas>
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-6">
+        <h3>Evening (19 - 01)</h3>
+        <canvas id="most_watched_chart_evening" style="width:100%;max-width:500px;display: inline-block;"></canvas>
+    </div>
+    
+    <div class="col-lg-6">
+        <h3>Night (01 - 07)</h3>
+        <canvas id="most_watched_chart_night" style="width:100%;max-width:500px;display: inline-block;"></canvas>
+    </div>
+</div>
+
+
+<script>
+    document.title = 'Most Watched - TwitchItalia Insights';
+
+    // get the data
+    get_data('{{stat}}', '{{current_version[0]}}');
+
+    var timeslots = ['morning', 'afternoon', 'evening', 'night'];
+
+    function get_data(stat, version) {
+        // make a request with ajax
+        $.ajax({
+            url: '/get_stat_data/' + stat + '/' + version,
+            type: 'GET',
+            success: function(result) {
+                // check if the verion has been found
+                if (result == 'not found') {
+                    alert('Version not found');
+                    return;
+                }
+                
+                // create the charts, one for each time slot
+                for (var i = 0; i < timeslots.length; i++) {
+                    create_chart(timeslots[i], result);
+                }
+
+            },
+            error: function(error) {
+                alert("error")
+                console.log(error);
+            }
+            
+        });
+    }
+
+    function create_chart(timeslot, result) {
+        // sort the data
+        result[timeslot] = Object.fromEntries(Object.entries(result[timeslot]).sort(([,a],[,b]) => b-a));
+
+        // get the data
+        xValues = Object.keys(result[timeslot]);
+        yValues = Object.values(result[timeslot]);
+        yValues.push(0);
+
+        new Chart(`most_watched_chart_${timeslot}`, {
+            type: "bar",
+            data: {
+                labels: xValues,
+                datasets: [{
+                    backgroundColor: ["gold", "silver","brown", "green", "blue"],
+                    data: yValues
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {display: false}
+                },
+            }
+        });
+    }
+
+</script>
+
+{%endblock%}

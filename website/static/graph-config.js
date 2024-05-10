@@ -1,0 +1,23 @@
+GexfJS.setParams({
+    showEdges: true,
+    useLens: false,
+    showInfo: false,
+    showList: false,
+    zoomLevel: 1.5,
+    curvedEdges: true,
+    edgeWidthFactor: 0.06,
+    minEdgeWidth: 0.1,
+    maxEdgeWidth: 500,
+    textDisplayThreshold: 11,
+    fontSizeFactor: 1.2,
+    nodeSizeFactor: 1.8,
+    replaceUrls: true,
+    showEdgeWeight: true,
+    showEdgeLabel: false,
+    showNodeAttributes: false,
+    sortNodeAttributes: true,
+    showId: false,
+    showEdgeArrow: false,
+    language: "en",
+    community: 'Twitch Italia'
+});

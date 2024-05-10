@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>milanitommaso - Twitch Analysis Graph</title>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='styles/graph/gexfjs.css', )}}" />
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='styles/graph/jquery-ui-1.10.3.custom.min.css')}}" />
+
+    <title>TwitchItalia Insights - Graph</title>
+    <!-- Favicon-->
+    <link rel="icon" type="image/x-icon" href="{{url_for('static', filename='img/graph-icon.png')}}" />
+    <!-- Font Awesome icons (free version)-->
+    <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+    <!-- Google fonts-->
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css" />
+    <link href="https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic" rel="stylesheet" type="text/css" />
+    <!-- Core theme CSS (includes Bootstrap)-->
+    <link href="{{url_for('static', filename='styles/styles.css')}}" rel="stylesheet" />
+
+
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
+    <script type="text/javascript">
+        if (typeof jQuery == 'undefined') {
+            document.write(unescape("%3Cscript type='text/javascript' src='js/jquery-2.0.2.min.js'%3E%3C/script%3E"));
+        }
+    </script>
+    <script type="text/javascript" src="{{url_for('static', filename='js/graph/jquery.mousewheel.min.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='js/graph/jquery-ui-1.10.3.custom.min.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='js/graph/gexfjs.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='graph-config.js')}}"></script>
+
+    <script>
+        document.title = "Graph - TwitchItalia Insights";
+    </script>
+
+</head>
+
+<body style="background-color: rgb(49, 49, 49);">
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg bg-primary text-capitalize sticky-top">
+        <div class="container">
+            <a class="text-white" href="/graph/description">Back to graph description</a>
+            
+            <div class="d-flex">
+                <span class="text-white me-2">You are viewing:</span>
+                <form method="get">
+                    <select name="v" onchange='if(this.value != 0) { this.form.submit(); }'>
+                        <option value="{{current_version[0]}}">{{current_version[1]}}</option>
+                        {% for name in other_versions %}
+                        <option value="{{other_versions[name]}}">{{name}}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <div id="zonecentre" class="gradient">
+        <canvas id="carte" width="0" height="0"></canvas>
+        <ul id="ctlzoom">
+            <li>
+                <a href="#" id="zoomPlusButton"> </a>
+            </li>
+            <li id="zoomSliderzone">
+                <div id="zoomSlider"></div>
+            </li>
+            <li>
+                <a href="#" id="zoomMinusButton"> </a>
+            </li>
+            <li>
+                <a href="#" id="lensButton"> </a>
+            </li>
+            <li>
+                <a href="#" id="edgesButton"> </a>
+            </li>
+        </ul>
+    </div>
+    <div id="leftcolumn">
+        <div id="unfold">
+            <a href="#" id="aUnfold" class="rightarrow"> </a>
+        </div>
+        <div id="leftcontent"></div>
+    </div>
+    <div id="search">
+        <h5 class="text-white">Find a streamer:</h5>
+        <form id="recherche">
+            <input id="searchinput" autocomplete="off" spellcheck="false" />
+        </form>
+    </div>
+    <ul id="autocomplete">
+    </ul>
+    <div id="infoContainer">
+        <a href="#" id="listButton"> </a>
+        <a href="#" id="infoButton"> </a>
+    </div>
+
+    <div id="infoPanel" class="off">
+        <h5 class="text-white">Infos</h5>
+        <div id="comm" class="info">
+            <h6 class="text-white">Community:</h6>
+        </div>
+        <div id="ref" class="info">
+            <h6 class="text-white">Periodo di riferimento:</h6>
+        </div>
+    </div>
+
+    <div id="listPanel" class="off">
+        <div class="scrollable">
+            <h2>Community:</h2>
+            <ul id="communityList"></ul>
+        </div>
+    </div>
+
+    <div id="credit" class="text-white">
+        <p class="mb-0">Made with 
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-heart-fill" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314"/>
+            </svg> 
+          by <a href="https://milanitommaso.com" target="_blank">milanitommaso</a></p>
+        <p>With the special help of <a href="https://twitch.tv/enkk" target="_blank">Enkk</a></p>
+    </div>
+
+</body>
+
+</html>

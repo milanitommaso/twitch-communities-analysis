@@ -1,0 +1,89 @@
+{%extends "stats/layout_stats.html"%}
+{%block content%}
+
+
+<h1 class="text-center mb-4">Emotes Ratio</h1>
+
+<div class="row">
+    <div class="col">
+        <canvas id="emotes_ratio_chart" style="width:100%;display:inline-block;height: 1200px;"></canvas>
+    </div>
+
+</div>
+
+
+<script>
+    document.title = 'Emotes Ratio - TwitchItalia Insights';
+
+    // get the data
+    get_data('{{stat}}', '{{current_version[0]}}');
+
+    function get_data(stat, version) {
+        // make a request with ajax
+        $.ajax({
+            url: '/get_stat_data/' + stat + '/' + version,
+            type: 'GET',
+            success: function(result) {
+                // check if the verion has been found
+                if (result == 'not found') {
+                    alert('Version not found');
+                    return;
+                }
+                
+                // create the charts
+                create_chart(result);
+
+            },
+            error: function(error) {
+                alert("error")
+                console.log(error);
+            }
+            
+        });
+    }
+
+
+    function create_chart(result) {
+        // get the data
+        xValues = Object.keys(result);
+
+        // sort the data by ratio
+        xValues.sort(function(a, b) {
+            return result[b] - result[a];
+        });
+
+        data = [];
+        for (let i = 0; i < xValues.length; i++) {
+            data.push(result[xValues[i]]);
+        }
+
+        new Chart('emotes_ratio_chart', {
+            type: "bar",
+            data: {
+                labels: xValues,
+                datasets: [{
+                    data: data,
+                    backgroundColor: "red",
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                },]
+            },
+            options: {
+                plugins:{
+                    legend: {
+                        display: false
+                    }
+                },
+                indexAxis: 'y',
+                scales: { 
+                    x: {
+                        position: 'top',
+                    }, 
+                } 
+            } 
+        });
+    }
+
+</script>
+
+{%endblock%}

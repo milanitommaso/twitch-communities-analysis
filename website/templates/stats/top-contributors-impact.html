@@ -1,0 +1,117 @@
+{%extends "stats/layout_stats.html"%}
+{%block content%}
+
+
+<h1 class="text-center mb-4">Top Contributors Impact</h1>
+
+<div class="row">
+    <div class="col">
+        <canvas id="top_contributors_impact_chart" style="width:100%;display:inline-block;height: 1200px;"></canvas>
+    </div>
+
+</div>
+
+
+<script>
+    document.title = 'Top Contributors Impact - TwitchItalia Insights';
+
+    // get the data
+    get_data('{{stat}}', '{{current_version[0]}}');
+
+    function get_data(stat, version) {
+        // make a request with ajax
+        $.ajax({
+            url: '/get_stat_data/' + stat + '/' + version,
+            type: 'GET',
+            success: function(result) {
+                // check if the verion has been found
+                if (result == 'not found') {
+                    alert('Version not found');
+                    return;
+                }
+                
+                // create the charts
+                create_chart(result);
+
+            },
+            error: function(error) {
+                alert("error")
+                console.log(error);
+            }
+            
+        });
+    }
+
+
+    function create_chart(result) {
+        // get the data
+
+        // order the data by top10 
+        result = Object.fromEntries(
+            Object.entries(result).sort(([, a], [, b]) => a[0] - b[0])
+        );
+
+
+        xValues = Object.keys(result);
+
+        data_top10 = [];
+        for (let i = 0; i < xValues.length; i++) {
+            data_top10.push(result[xValues[i]][0]);
+        }
+
+        data_top50 = [];
+        for (let i = 0; i < xValues.length; i++) {
+            data_top50.push(result[xValues[i]][1]);
+        }
+
+        data_top100 = [];
+        for (let i = 0; i < xValues.length; i++) {
+            data_top100.push(result[xValues[i]][2]);
+        }
+
+
+        new Chart('top_contributors_impact_chart', {
+            type: "bar",
+            data: {
+                labels: xValues,
+                datasets: [{
+                    label: 'Top 10',
+                    data: data_top10,
+                    backgroundColor: "red",
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Top 50',
+                    data: data_top50,
+                    backgroundColor: "blue",
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Top 100',
+                    data: data_top100,
+                    backgroundColor: "green",
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }
+                ]
+            },
+            options: { 
+                indexAxis: 'y',
+                scales: { 
+                    x: { 
+                        stacked: true,
+                        position: 'top',
+                    }, 
+                    y: { 
+                        stacked: true 
+                    } 
+                } 
+            } 
+        });
+    }
+
+</script>
+
+{%endblock%}

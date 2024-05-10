@@ -1,0 +1,85 @@
+{%extends "stats/layout_stats.html"%}
+{%block content%}
+
+
+<h1 class="text-center mb-4">Streamer Reach</h1>
+
+<div class="row">
+    <div class="col">
+        <canvas id="streamer_reach_chart" style="width:100%;display:inline-block;height: 1200px;"></canvas>
+    </div>
+
+</div>
+
+
+<script>
+    document.title = 'Streamer Reach - TwitchItalia Insights';
+
+    // get the data
+    get_data('{{stat}}', '{{current_version[0]}}');
+
+    function get_data(stat, version) {
+        // make a request with ajax
+        $.ajax({
+            url: '/get_stat_data/' + stat + '/' + version,
+            type: 'GET',
+            success: function(result) {
+                // check if the verion has been found
+                if (result == 'not found') {
+                    alert('Version not found');
+                    return;
+                }
+                
+                // create the charts
+                create_chart(result);
+
+            },
+            error: function(error) {
+                alert("error")
+                console.log(error);
+            }
+            
+        });
+    }
+
+
+    function create_chart(result) {
+        // sort the data by reach
+        result = Object.fromEntries(
+            Object.entries(result).sort(([,a],[,b]) => b-a)
+        );
+
+        // get the data
+        xValues = Object.keys(result);
+        yValues = Object.values(result);
+
+        new Chart('streamer_reach_chart', {
+            type: "bar",
+            data: {
+                labels: xValues,
+                datasets: [{
+                    data: yValues,
+                    backgroundColor: "red",
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                },]
+            },
+            options: {
+                plugins:{
+                    legend: {
+                        display: false
+                    }
+                },
+                indexAxis: 'y',
+                scales: { 
+                    x: {
+                        position: 'top',
+                    }, 
+                } 
+            } 
+        });
+    }
+
+</script>
+
+{%endblock%}
