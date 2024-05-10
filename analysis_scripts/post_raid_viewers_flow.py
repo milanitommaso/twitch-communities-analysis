@@ -6,6 +6,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+MIN_RAID_USERS = 400
+MIN_VIEWERS_DESTINATION = 200
+
+
 def get_raids():
     raids = []
 
@@ -25,7 +29,7 @@ def get_raids():
                     raid_viewers = line.split("\t")[3].strip()
 
                     # add the raid to the dictionary
-                    if int(raid_viewers) > 500:
+                    if int(raid_viewers) > MIN_RAID_USERS:
                         raids.append({"raid_datetime": raid_datetime, "raided_channel": raided_channel_name, "raid_viewers": raid_viewers})
 
     return raids
@@ -55,11 +59,14 @@ def get_viewers_after_raids(raids):
 
         # get a sub list of streams info with only the files 5 minutes before the raid and 60 minutes after the raid
         streams_info_sublist = []
+        r_datetime = datetime.strptime(raid_datetime, "%y-%m-%d_%H-%M-%S")
         for s in streams_info:
             s_datetime = datetime.strptime(s.split(".")[0].strip("streams_info"), "%Y-%m-%d_%H-%M-%S")
-            r_datetime = datetime.strptime(raid_datetime, "%y-%m-%d_%H-%M-%S")
             if r_datetime - timedelta(minutes=2) <= s_datetime <= r_datetime + timedelta(minutes=60):
                 streams_info_sublist.append(s)
+
+            if s_datetime > r_datetime + timedelta(minutes=60):
+                break
 
         streams_info_sublist.sort()
 
@@ -70,7 +77,7 @@ def get_viewers_after_raids(raids):
                     if raided_channel in line:
                         viewers_count_list.append(int(line.split("\t")[2].strip()))
 
-        # fine the time when the raid happened
+        # find the time when the raid happened
         raid_found = False
         try:
             for i in range(10):
@@ -82,7 +89,8 @@ def get_viewers_after_raids(raids):
             raid_found = False
             
 
-        if raid_found:
+        # check that the destination channel has at least MIN_VIEWERS_DESTINATION viewers
+        if raid_found and viewers_count_list[0] > MIN_VIEWERS_DESTINATION:
             viewers_after_raids.append({"channel": raided_channel, "datetime": raid_datetime, "raid_viewers": raid_viewers, "after_raid_viewers_count": viewers_count_list})
 
     bar.finish()
@@ -121,7 +129,7 @@ def get_mean_viewers_after_raids(viewers_after_raids):
 
     for i in range(60):
         try:
-            mean_viewers_after_raid[i] = mean_viewers_after_raid[i] / counters[i]
+            mean_viewers_after_raid[i] = round(mean_viewers_after_raid[i] / counters[i], 2)
         except:
             pass
 
@@ -136,13 +144,13 @@ def draw_graph(mean_viewers_after_raid):
     plt.plot(x, y)
 
     ax = plt.gca()
-    ax.set_xlim([0, 45])
+    ax.set_xlim([0, 54])
     ax.set_ylim([0, 100])
 
     plt.xlabel('Time after the raid (minutes)')
     plt.ylabel('viewers arrived from raid')
 
-    plt.savefig("mean_viewers_after_raid.png")
+    plt.savefig("analysis_results/mean_viewers_after_raid.png")
 
 
 def main():
@@ -157,7 +165,11 @@ def main():
 
     mean_viewers_after_raid = get_mean_viewers_after_raids(viewers_after_raids)
 
-    pprint(mean_viewers_after_raid)
+    # save the data in a csv file
+    with open("analysis_results/post_raid_viewers_flow.csv", "w") as file:
+        file.write("time\tmean_viewers\n")
+        for i, v in enumerate(mean_viewers_after_raid):
+            file.write(f"{i}\t{v}\n")
 
     draw_graph(mean_viewers_after_raid)
 
