@@ -1,14 +1,14 @@
-credentials.json
+analyses_and_data/data_downloader/credentials.json
 telegram_data.json
-downloaded_chats/*
-downloaded_events/*
-streams_info/*
-chatters/*
-analysis_scripts/get_chatters.json
-lives.txt
-analysis_results/*
-top_streamers.txt
-downloaded_emotes.json
+analyses_and_data/downloaded_chats/*
+analyses_and_data/downloaded_events/*
+analyses_and_data/streams_info/*
+analyses_and_data/chatters/*
+analyses_and_data/analysis_scripts/get_chatters.json
+analyses_and_data/lives.txt
+analyses_and_data/analysis_results/*
+analyses_and_data/top_streamers.txt
+analyses_and_data/downloaded_emotes.json
 
 .vscode/
 .DS_Store
