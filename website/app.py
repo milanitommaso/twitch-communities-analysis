@@ -15,7 +15,7 @@ def get_verions(stat):
     versions = {}
 
     # get the versions
-    for file in sorted(os.listdir(f"static/analyses_results/{stat}")):
+    for file in sorted(os.listdir(f"static/analyses_results/{stat}"), reverse=True):
         if not file.endswith(".csv"):
             continue
 
