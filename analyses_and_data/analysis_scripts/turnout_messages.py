@@ -2,8 +2,6 @@ import os
 import progressbar
 from datetime import datetime
 
-MONTHS = ["december", "january", "february", "march"]
-
 
 def get_days_of_week():
     return ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -18,25 +16,30 @@ def get_minutes_of_day():
     return minutes
 
 
-def get_turnout():
+def get_year_month_from_chat_filename(filename):
+    dt =  datetime.strptime(filename, "chat_%y-%m-%d_%H-%M-%S.txt")
+    return dt.strftime("%Y%m")
+
+
+def get_turnout(years_months):
     turnout = {}
 
     # get all channels dirs
-    channels_dirs = [x for x in os.listdir("downloaded_chats") if "template" not in x]
+    channels_dirs = [x for x in os.listdir("analyses_and_data/downloaded_chats") if "template" not in x]
 
     bar = progressbar.ProgressBar(maxval=len(channels_dirs), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
     bar.start()
 
     for i, channel in enumerate(channels_dirs):
         # get all chat files
-        chats = [x for x in os.listdir("downloaded_chats/" + channel) if "template" not in x]
+        chats = [x for x in os.listdir("analyses_and_data/downloaded_chats/" + channel) if "template" not in x]
 
         for chat in chats:
 
-            if datetime.strptime(chat.split("_")[1], "%y-%m-%d").strftime("%B").lower() not in MONTHS:
+            if not get_year_month_from_chat_filename(chat) in years_months:
                 continue
 
-            with open("downloaded_chats/" + channel + "/" + chat, "r") as file:
+            with open("analyses_and_data/downloaded_chats/" + channel + "/" + chat, "r") as file:
                 lines = file.readlines()
 
             for line in lines:
@@ -63,8 +66,10 @@ def get_turnout():
     bar.start()
     for i, dt in enumerate(turnout):
         day = datetime.strptime(dt, "%y-%m-%d_%H-%M").strftime("%A").lower()
-        month = datetime.strptime(dt, "%y-%m-%d_%H-%M").strftime("%B").lower()
-        if month not in MONTHS:
+
+        year_month = datetime.strptime(dt, "%y-%m-%d_%H-%M").strftime("%Y%m")
+
+        if year_month not in years_months:
             continue
 
         hour_minute = dt.split("_")[1]
@@ -92,13 +97,42 @@ def get_turnout():
     return turnout_week
 
 
-def main():
-    turnout = get_turnout()
+def for_handler(years_months):
+    result_str = ""
+    turnout = get_turnout(years_months)
 
     # save the turnout to a csv file
     minutes = get_minutes_of_day()
 
-    with open(f"analysis_results/turnout_messages.csv", "w") as file:
+    result_str += "Hour:Minute\t"
+    days = get_days_of_week()
+    for day in days:
+        result_str += f"{day}\t"
+
+    result_str += "\n"
+
+    for minute in minutes:
+        if int(minute.split("-")[1]) % 30 != 0:
+            continue
+
+        result_str += f"{minute[:2]}:{minute[3:5]}\t"
+        for day in days:
+            if minute in turnout[day]:
+                result_str += f"{turnout[day][minute]}\t"
+            else:
+                result_str += "0\t"
+        result_str += "\n"
+
+    return result_str
+
+
+def main():
+    turnout = get_turnout(["202401", "202402", "202403"])
+
+    # save the turnout to a csv file
+    minutes = get_minutes_of_day()
+
+    with open(f"analyses_and_data/analysis_results/turnout_messages.csv", "w") as file:
         file.write("Hour:Minute\t")
         days = get_days_of_week()
         for day in days:

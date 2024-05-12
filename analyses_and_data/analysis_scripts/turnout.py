@@ -5,6 +5,12 @@ from datetime import datetime
 def get_days_of_week():
     return ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
+
+def get_year_month_from_streams_info_filename(filename):
+    dt =  datetime.strptime(filename, "streams_info%Y-%m-%d_%H-%M-%S.txt")
+    return dt.strftime("%Y%m")
+
+
 def get_day_from_streams_info_filename(filename):
     dt =  datetime.strptime(filename, "streams_info%Y-%m-%d_%H-%M-%S.txt")
     return dt.strftime("%A").lower()
@@ -20,11 +26,11 @@ def get_minute_from_streams_info_filename(filename):
     return dt.strftime("%H:%M")
 
 
-def get_turnout():
+def get_turnout(years_months):
     turnout = {}    # key: day of week, value: dict with key: hour-minute of day, value: list of viewers, than calculate the mean
 
     # get all streams info filenames
-    streams_info = [x for x in os.listdir("streams_info") if "template" not in x]
+    streams_info = [x for x in os.listdir("analyses_and_data/streams_info") if "template" not in x]
     streams_info.sort()
 
     bar = progressbar.ProgressBar(maxval=len(streams_info), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
@@ -35,7 +41,12 @@ def get_turnout():
         day = get_day_from_streams_info_filename(streams)
         month = get_month_from_streams_info_filename(streams)
 
-        with open("streams_info/" + streams, "r") as file:
+        year_month = get_year_month_from_streams_info_filename(streams)
+
+        if year_month not in years_months:
+            continue
+
+        with open("analyses_and_data/streams_info/" + streams, "r") as file:
             lines = file.readlines()
         for line in lines:
             count_viewers += int(line.split("\t")[2].strip())
@@ -55,7 +66,7 @@ def get_turnout():
 
     bar.finish()
 
-    # calculate the mean for all months
+    # calculate the mean for all months 
     turnout["total"] = {}
     for month in turnout:
         if month == "total":
@@ -110,8 +121,32 @@ def draw_graph(turnout):
     plt.savefig("analysis_results/turnout.png")
 
 
+def for_handler(years_months: list):
+    turnout = get_turnout(years_months)
+    
+    result_str = ""
+
+    result_str += "Hour:Minute\t"
+    days = get_days_of_week()
+    for day in days:
+        result_str += f"{day}\t"
+
+    result_str += "\n"
+
+    for minute in turnout["total"]["monday"]:
+        if int(minute.split(":")[1]) % 30 != 0:
+            continue
+
+        result_str += f"{minute}\t"
+        for day in days:
+            result_str += f"{turnout['total'][day][minute]}\t"
+        result_str += "\n"
+
+    return result_str
+
+
 def main():
-    turnout = get_turnout()
+    turnout = get_turnout(["202401", "202402", "202403"])
 
     # draw_graph(turnout)
 
@@ -119,7 +154,7 @@ def main():
     for month in turnout:
         if month != "december" and month != "january" and month != "february" and month != "march" and month != "total":
             continue
-        with open(f"analysis_results/turnout-{month}.csv", "w") as file:
+        with open(f"analyses_and_data/analysis_results/turnout-{month}.csv", "w") as file:
             file.write("Hour:Minute\t")
             days = get_days_of_week()
             for day in days:
@@ -135,6 +170,7 @@ def main():
                 for day in days:
                     file.write(f"{turnout[month][day][minute]}\t")
                 file.write("\n")
+
 
 if __name__ == "__main__":
     main()
