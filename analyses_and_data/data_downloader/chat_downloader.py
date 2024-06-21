@@ -367,6 +367,8 @@ def main():
 
 
 if __name__ == "__main__":
+    last_exception = datetime.datetime.now()
+
     try:
         main()
     except KeyboardInterrupt:
@@ -376,3 +378,7 @@ if __name__ == "__main__":
         print(tb)
         tg_message = f"Error in chat_downloader.py\n{tb}"
         notify_error(tg_message)
+
+        if datetime.datetime.now() - last_exception > datetime.timedelta(days=1):
+            last_exception = datetime.datetime.now()
+            os.system("systemctl restart chat-downloader")
