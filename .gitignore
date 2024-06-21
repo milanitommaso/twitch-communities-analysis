@@ -14,6 +14,10 @@ website/static/analyses_results/*
 website/static/graphs/*
 website/tca-websiteenv/*
 
+# template files by startbootstrap
+website/static/styles/styles.css
+website/static/js/scripts.js
+
 .vscode/
 .DS_Store
 
