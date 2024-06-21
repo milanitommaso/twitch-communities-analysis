@@ -18,8 +18,16 @@
 
     </head>
     <body id="page-top">
+
         <!-- Navigation-->
-        <nav class="navbar navbar-expand-lg bg-secondary text-uppercase fixed-top" id="mainNav">
+        <div class="bg-primary text">
+            <div class="container bg-primary text-white lead">
+                Please note that this website is still in development. Any data shown here may not be accurate or up-to-date. If you have any questions or feedback, please feel free to contact me.
+            </div>
+        </div>
+
+        <nav class="navbar navbar-expand-lg bg-secondary text-uppercase" id="mainNav">
+            <!-- TODO: use fixed-top class in the nav -->
             <div class="container">
                 <a class="navbar-brand" href="/">TwitchItalia Insights</a>
                 <button class="navbar-toggler text-uppercase font-weight-bold bg-primary text-white rounded" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +44,8 @@
                 </div>
             </div>
         </nav>
+
+
 
         <br>
             {% block content %}{% endblock %}
