@@ -51,9 +51,12 @@ def index():
 
     # most watched
     most_watched_by_timeslots = get_stat_data("most-watched", "last_7_days")
-    # keep only the first 3 keys
-    for t in most_watched_by_timeslots:
-        most_watched_by_timeslots[t] = [f"{k} ({int(v)})" for k, v in most_watched_by_timeslots[t].items()]
+
+    if most_watched_by_timeslots == "not found":
+        most_watched_by_timeslots = {"morning": {}, "afternoon": {}, "evening": {}, "night": {}}
+    else:
+        for t in most_watched_by_timeslots:
+            most_watched_by_timeslots[t] = [f"{k} ({int(v)})" for k, v in most_watched_by_timeslots[t].items()]
 
     # get the version
     # get the previous month
