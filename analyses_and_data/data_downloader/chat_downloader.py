@@ -9,6 +9,9 @@ import datetime
 import os
 import traceback
 
+import sys
+sys.setrecursionlimit(3000)
+
 from config import *
 from notify_telegram import notify_error as notify_error
 
@@ -17,7 +20,7 @@ def get_channels_to_listen() -> list:
     # take the list of channels from the last file in /stream_info folder
     channels_list = []
 
-    filename = "streams_info/" + sorted(os.listdir("streams_info"))[-1]
+    filename = "analyses_and_data/streams_info/" + sorted(os.listdir("analyses_and_data/streams_info"))[-1]
     print(f"> Reading channels from {filename}")
     with open(filename, "r") as f:
         count = 0
@@ -177,7 +180,7 @@ class ListenChatThread(threading.Thread):
         self.socket_irc = None
         self.chat_log = ""
         self.event_log = ""
-        self.chat_log_filename = f"downloaded_chats/{channel}/chat_{datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S')}.txt"
+        self.chat_log_filename = f"analyses_and_data/downloaded_chats/{channel}/chat_{datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S')}.txt"
         self._reloading_irc_connection = threading.Event()
         self.ttl = int(RELOAD_IRC_CONNECTION_TIME / CHECK_CHANNELS_TIME * random.uniform(0.6, 1.2)) # randomize the ttl to avoid all the threads to reload the connection at the same time
 
@@ -214,8 +217,8 @@ class ListenChatThread(threading.Thread):
         
     def save_chat_log(self):
         # check if the folder exists
-        if not os.path.exists(f"downloaded_chats/{self.channel}"):
-            os.makedirs(f"downloaded_chats/{self.channel}")
+        if not os.path.exists(f"analyses_and_data/downloaded_chats/{self.channel}"):
+            os.makedirs(f"analyses_and_data/downloaded_chats/{self.channel}")
 
         with open(self.chat_log_filename, "a") as f:
             f.write(self.chat_log)
@@ -223,7 +226,7 @@ class ListenChatThread(threading.Thread):
 
     def save_event_log(self):
         if self.event_log != "":
-            with open(f"downloaded_events/{self.channel}.txt", "a") as f:
+            with open(f"analyses_and_data/downloaded_events/{self.channel}.txt", "a") as f:
                 f.write(self.event_log)
             self.event_log = ""
 
@@ -238,13 +241,13 @@ class ListenChatThread(threading.Thread):
         self.socket_irc = self.connect()    # set the new irc socket
         self.ttl = int(RELOAD_IRC_CONNECTION_TIME / CHECK_CHANNELS_TIME * random.uniform(0.6, 1.2)) # randomize the ttl to avoid all the threads to reload the connection at the same time
 
-        readbuffer = self.socket_irc.recv(1024).decode()
+        readbuffer = self.socket_irc.recv(32768).decode()
         count = 0
         while "Login unsuccessful" in readbuffer and count <= 20:
             self.socket_irc.close()
             time.sleep(random.uniform(0.5, 5))    # randomize the sleep to avoid all the threads to reload the connection at the same time
             self.socket_irc = self.connect()
-            readbuffer = self.socket_irc.recv(1024).decode()
+            readbuffer = self.socket_irc.recv(32768).decode()
             count += 1
 
         if count > 20 and "Login unsuccessful" in readbuffer:
@@ -265,7 +268,7 @@ class ListenChatThread(threading.Thread):
 
         #sends variables for connection to twitch chat
         irc.send(('PASS ' + PASSWORD + '\r\n').encode())
-        irc.send(('USER ' + NICK + ' 0 * :' + BOT_OWNER + '\r\n').encode())
+        # irc.send(('USER ' + NICK + ' 0 * :' + BOT_OWNER + '\r\n').encode())
         irc.send(('NICK ' + NICK + '\r\n').encode())
 
         irc.send(('CAP REQ :twitch.tv/tags\r\n').encode())
@@ -278,14 +281,14 @@ class ListenChatThread(threading.Thread):
     
     def start_listen(self):
         readbuffer = ""
+        count_timeout = 0
         while not self.is_stopped():
             if self.is_reloading_irc_connection():  # wait for the connection to be ready, used for the reload of the irc connection
                 time.sleep(0.3)
                 continue
 
-            count_timeout = 0
             try:
-                readbuffer = self.socket_irc.recv(10240).decode()
+                readbuffer = self.socket_irc.recv(32768).decode()
                 count_timeout = 0
             except socket.timeout:
                 count_timeout += 1
@@ -336,13 +339,13 @@ class ListenChatThread(threading.Thread):
     
     def run(self):
         self.socket_irc = self.connect()
-        readbuffer = self.socket_irc.recv(1024).decode()
+        readbuffer = self.socket_irc.recv(32768).decode()
         count = 0
         while "Login unsuccessful" in readbuffer and count <= 10:
             self.socket_irc.close()
             time.sleep(0.7)
             self.socket_irc = self.connect()
-            readbuffer = self.socket_irc.recv(1024).decode()
+            readbuffer = self.socket_irc.recv(32768).decode()
             count += 1
 
         if count > 10 and "Login unsuccessful" in readbuffer:

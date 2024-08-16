@@ -12,7 +12,7 @@ ALLOWED_USERNOTICE = ['sub', 'resub', 'subgift', 'submysterygift', 'giftpaidupgr
 
 # take the credentials from the json file
 try:
-    with open('data_downloader/credentials.json') as json_file:
+    with open('analyses_and_data/data_downloader/credentials.json') as json_file:
         data = json.load(json_file)
         PASSWORD = data['password_irc']
         AUTHORIZATION_TWITCH_API = data['authorization_twitch_api']
