@@ -1253,12 +1253,12 @@
         let version;
         switch ($.QueryString.v ?? '202312-202403') {
             default:
-                version = '202312-202403';
-                GexfJS.setParams({
-                    centreY: 560,
-                    maxEdgeWidth: 90,
-                    ref: "from DEC 01 2023 to MAR 31 2024"
-                });
+                // version = '202312-202403';
+                // GexfJS.setParams({
+                //     centreY: 560,
+                //     maxEdgeWidth: 90,
+                //     ref: "from DEC 01 2023 to MAR 31 2024"
+                // });
                 break;
 
             case '202312-202403':
@@ -1267,6 +1267,24 @@
                     centreY: 560,
                     maxEdgeWidth: 90,
                     ref: "from DEC 01 2023 to MAR 31 2024"
+                });
+                break;
+
+            case '202404-202406':
+                version = '202404-202406';
+                GexfJS.setParams({
+                    centreY: 400,
+                    maxEdgeWidth: 130,
+                    ref: "from Apr 01 2024 to Jun 31 2024"
+                });
+                break;
+
+            case '202407':
+                version = '202407';
+                GexfJS.setParams({
+                    centreY: 400,
+                    maxEdgeWidth: 250,
+                    ref: "from Jul 1 2024 to Jul 31 2024"
                 });
                 break;
 
