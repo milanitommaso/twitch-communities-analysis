@@ -1,18 +1,17 @@
-from collections import Counter
 from datetime import datetime
 import os
 import json
 import itertools
 import progressbar
 
-MONTHS = ["december","january","february","march"]
-N_CHANNELS = 100
+N_CHANNELS = 60
+ANALYSES_REQUIRED = ["top_streamers"]
 
 
-def get_top_streamers(number_of_streamers):
+def get_top_streamers(number_of_streamers, version):
     top_streamers = []
 
-    with open('analysis_results/top_streamers.json', 'r') as f:
+    with open(f'analyses_and_data/cached_data/top_streamers{version}.json', 'r') as f:
         top_streamers = json.load(f)
 
     # sort the streamers by average viewers
@@ -24,13 +23,15 @@ def get_top_streamers(number_of_streamers):
     return top_streamers
 
 
-def get_chatters(top_streamers):
+def get_year_month_from_chatters_filename(filename):
+    dt =  datetime.strptime(filename, "%Y%m%d_%H%M.json")
+    return dt.strftime("%Y%m")
+
+
+def get_chatters(top_streamers, years_months):
     chatters = {}
 
-    chatters_filenames = [x for x in os.listdir("chatters") if "template" not in x]
-
-    # filter only the chatters files of months in MONTHS
-    chatters_filenames = [x for x in chatters_filenames if datetime.strptime(x.split("_")[0], '%Y%m%d').strftime('%B').lower() in MONTHS]
+    chatters_filenames = sorted([x for x in os.listdir("analyses_and_data/chatters") if "template" not in x])
 
     print("> Getting chatters")
 
@@ -38,7 +39,12 @@ def get_chatters(top_streamers):
     bar.start()
 
     for i, filename in enumerate(chatters_filenames):
-        with open(f'chatters/{filename}', 'r') as f:
+
+        year_month = get_year_month_from_chatters_filename(filename)
+        if not year_month in years_months:
+            continue
+
+        with open(f'analyses_and_data/chatters/{filename}', 'r') as f:
             chatters_dict = json.load(f)
 
         for channel in chatters_dict:
@@ -84,8 +90,10 @@ def get_counter(all_chatters):
     return counter
 
 
-def get_community_loyalty(top_streamers):
-    chatters = get_chatters(top_streamers)
+def get_community_loyalty(years_months, version):
+    top_streamers = list(get_top_streamers(10000, version))
+
+    chatters = get_chatters(top_streamers, years_months)
     all_chatters = list(itertools.chain.from_iterable(chatters.values()))
 
     counter = get_counter(all_chatters)
@@ -122,17 +130,46 @@ def get_community_loyalty(top_streamers):
     return community_loyalty
 
 
-def main():
-    top_streamers = get_top_streamers(number_of_streamers=5000)
+def for_handler(years_months, version):
+    community_loyalty = get_community_loyalty(years_months, version)
 
-    community_loyalty = get_community_loyalty(list(top_streamers.keys()))
+    result_str = ""
 
     for i in range(1, 21):
         for streamer in community_loyalty:
             if i not in community_loyalty[streamer]:
                 community_loyalty[streamer][i] = 0
 
-    with open('analysis_results/community_loyalty.csv', 'w') as f:
+    result_str += "Streamer\t1\t2-3\t4-5\t6-10\t11-15\t16-20\t21+\n"
+    for streamer in community_loyalty:
+        result_str += f"{streamer}\t"
+
+        result_str += f"{round(community_loyalty[streamer][1], 3)}%\t"
+
+        result_str += f"{round(community_loyalty[streamer][2] + community_loyalty[streamer][3], 3)}%\t"
+
+        result_str += f"{round(community_loyalty[streamer][4] + community_loyalty[streamer][5], 3)}%\t"
+
+        result_str += f"{round(community_loyalty[streamer][6] + community_loyalty[streamer][7] + community_loyalty[streamer][8] + community_loyalty[streamer][9] + community_loyalty[streamer][10], 3)}%\t"
+
+        result_str += f"{round(community_loyalty[streamer][11] + community_loyalty[streamer][12] + community_loyalty[streamer][13] + community_loyalty[streamer][14] + community_loyalty[streamer][15], 3)}%\t"
+
+        result_str += f"{round(community_loyalty[streamer][16] + community_loyalty[streamer][17] + community_loyalty[streamer][18] + community_loyalty[streamer][19] + community_loyalty[streamer][20], 3)}%\t"
+
+        result_str += f"{round(sum([v for k, v in community_loyalty[streamer].items() if k > 20]), 3)}%\n"
+
+    return result_str
+
+
+def main():
+    community_loyalty = get_community_loyalty(["202401", "202402", "202403"])
+
+    for i in range(1, 21):
+        for streamer in community_loyalty:
+            if i not in community_loyalty[streamer]:
+                community_loyalty[streamer][i] = 0
+
+    with open('analyses_and_data/analysis_results/community_loyalty.csv', 'w') as f:
         f.write("Streamer\t1\t2-3\t4-5\t6-10\t11-15\t16-20\t21+\n")
         for streamer in community_loyalty:
             f.write(f"{streamer}\t")
