@@ -20,6 +20,11 @@ def get_messages_last_hour():
 
         files = list(os.listdir(os.path.join('analyses_and_data/downloaded_chats', d)))
 
+        # take only the last 3 files for directory, ordered by creation date
+        files.sort(key=lambda x: os.path.getctime(os.path.join('analyses_and_data/downloaded_chats', d, x)), reverse=True)
+        files = files[:3]
+
+
         # for each file, open it and save the chatters in a dict
         for f in files:
             # if the file has been created after the end datetime, skip the file
