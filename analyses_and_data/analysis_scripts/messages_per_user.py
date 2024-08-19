@@ -1,4 +1,4 @@
-from pprint import pprint
+ANALYSES_REQUIRED = ["turnout", "turnout_by_messages"]
 
 
 def get_days_of_week():
@@ -14,14 +14,13 @@ def get_minutes_of_day():
     return minutes
 
 
-def get_turnout_messages_viewers():
+def get_turnout_messages_viewers(version):
     # open the turnout.csv file and create a dictionary
     viewers_dict = {}   # key: day, value: dict with key: hour-minute, value: number of viewers
 
-    with open("analysis_results/turnout-total.csv", "r") as file:
+    with open(f"website/static/analyses_results/turnout/{version}.csv", "r") as file:
         lines = file.readlines()
     for i, line in enumerate(lines):
-        
         if i == 0:
             days = line.strip().split("\t")[1:]
             continue
@@ -37,10 +36,9 @@ def get_turnout_messages_viewers():
     # open the turnout_messages.csv file and create a dictionary
     messages_dict = {}   # key: day, value: dict with key: hour-minute, value: number of messages
 
-    with open("analysis_results/turnout_messages.csv", "r") as file:
+    with open(f"website/static/analyses_results/turnout-by-messages/{version}.csv", "r") as file:
         lines = file.readlines()
     for i, line in enumerate(lines):
-        
         if i == 0:
             days = line.strip().split("\t")[1:]
             continue
@@ -66,15 +64,45 @@ def get_turnout_messages_viewers():
     return messages_viewers_dict
 
 
-def main():
-
-    messages_viewers_dict = get_turnout_messages_viewers()
+def for_handler(version):
+    messages_viewers_dict = get_turnout_messages_viewers(version)
 
     # save the turnout to a csv file
     minutes = get_minutes_of_day()
     days = get_days_of_week()
 
-    with open(f"analysis_results/turnout_messages_viewers.csv", "w") as file:
+    result_str = ""
+
+    result_str += "Hour:Minute\t"
+    for day in days:
+        result_str += f"{day}\t"
+
+    result_str += "\n"
+
+    for minute in minutes:
+        if int(minute.split(":")[1]) % 30 != 0:
+            continue
+        
+        result_str += f"{minute[:2]}:{minute[3:5]}\t"
+        for day in days:
+            if minute in messages_viewers_dict[day]:
+                result_str += f"{messages_viewers_dict[day][minute]}\t"
+            else:
+                result_str += "0\t"
+        result_str += "\n"
+
+    return result_str
+
+
+def main():
+    version = "202404-202406"
+    messages_viewers_dict = get_turnout_messages_viewers(version)
+
+    # save the turnout to a csv file
+    minutes = get_minutes_of_day()
+    days = get_days_of_week()
+
+    with open(f"analyses_and_data/analysis_results/turnout_messages_viewers.csv", "w") as file:
         file.write("Hour:Minute\t")
         for day in days:
             file.write(f"{day}\t")
