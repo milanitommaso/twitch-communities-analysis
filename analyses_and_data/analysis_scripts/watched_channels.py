@@ -4,12 +4,13 @@ from datetime import datetime
 import os
 import progressbar
 
-MONTHS = ["december","january","february","march"]
+ANALYSES_REQUIRED = ["top_streamers"]
 
-def get_top_streamers(number_of_streamers):
+
+def get_top_streamers(number_of_streamers, version):
     top_streamers = []
 
-    with open('analysis_results/top_streamers.json', 'r') as f:
+    with open(f'analyses_and_data/cached_data/top_streamers{version}.json', 'r') as f:
         top_streamers = json.load(f)
 
     # sort the streamers by average viewers
@@ -21,13 +22,13 @@ def get_top_streamers(number_of_streamers):
     return top_streamers
 
 
-def get_chatters(top_streamers):
+def get_chatters(top_streamers, years_months):
     chatters = {}
 
-    chatters_filenames = [x for x in os.listdir("chatters") if "template" not in x]
+    chatters_filenames = [x for x in os.listdir("analyses_and_data/chatters") if "template" not in x]
 
     # filter only the chatters files of months in MONTHS
-    chatters_filenames = [x for x in chatters_filenames if datetime.strptime(x.split("_")[0], '%Y%m%d').strftime('%B').lower() in MONTHS]
+    chatters_filenames = [x for x in chatters_filenames if datetime.strptime(x.split("_")[0], '%Y%m%d').strftime('%Y%m').lower() in years_months]
 
     print("> Getting chatters")
 
@@ -35,7 +36,7 @@ def get_chatters(top_streamers):
     bar.start()
 
     for i, filename in enumerate(chatters_filenames):
-        with open(f'chatters/{filename}', 'r') as f:
+        with open(f'analyses_and_data/chatters/{filename}', 'r') as f:
             chatters_dict = json.load(f)
 
         for channel in chatters_dict:
@@ -56,8 +57,8 @@ def get_chatters(top_streamers):
     return chatters
 
 
-def get_watched_channels(top_streamers):
-    chatters = get_chatters(top_streamers)
+def get_watched_channels(top_streamers, years_months):
+    chatters = get_chatters(top_streamers, years_months)
     all_chatters = list(itertools.chain.from_iterable(chatters.values()))
 
     print("> Getting counter")
@@ -101,12 +102,31 @@ def get_watched_channels(top_streamers):
     return watched_channels
 
 
+def for_handler(years_months, version):
+    top_streamers = get_top_streamers(10000, version)
+
+    watched_channels = get_watched_channels(list(top_streamers.keys()), years_months)
+
+    res_str = ""
+
+    res_str += "n_channels\tn_chatters\n"
+    for i, (n_channels, n_chatters) in enumerate(watched_channels.items()):
+        if i >= 20:
+            break
+        res_str += f"{n_channels}\t{n_chatters}\n"
+
+    return res_str
+
+
 def main():
-    top_streamers = get_top_streamers(5000)
+    years_months = ["202404", "202405", "202406"]
+    version = "202404-202406"
 
-    watched_channels = get_watched_channels(list(top_streamers.keys()))
+    top_streamers = get_top_streamers(5000, version)
 
-    with open('analysis_results/watched_channels.csv', 'w') as f:
+    watched_channels = get_watched_channels(list(top_streamers.keys()), years_months)
+
+    with open('analyses_and_data/analysis_results/watched_channels.csv', 'w') as f:
         f.write("n_channels\tn_chatters\n")
         for n_channels, n_chatters in watched_channels.items():
             f.write(f"{n_channels}\t{n_chatters}\n")
