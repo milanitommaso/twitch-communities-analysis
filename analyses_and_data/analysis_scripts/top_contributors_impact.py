@@ -6,14 +6,14 @@ import datetime
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', "data_downloader"))
 from config import *
 
-MONTHS = ["december","january","february","march"]
+ANALYSES_REQUIRED = ["top_streamers", "lives"]
 TOP_N_CHATTERS = [10, 50, 100]
 
 
-def get_top_streamers(number_of_streamers):
+def get_top_streamers(number_of_streamers, version):
     top_streamers = []
 
-    with open('top_streamers.txt', 'r') as f:
+    with open(f'analyses_and_data/cached_data/top_streamers{version}.txt', 'r') as f:
         lines = f.readlines()[0:number_of_streamers]
 
     for l in lines:
@@ -26,12 +26,12 @@ def get_timestamp_from_filename(filename):
     return datetime.datetime.strptime(filename, "chat_%y-%m-%d_%H-%M-%S.txt")
 
 
-def get_chats_dataframes_to_analyze(directory: str):
+def get_chats_dataframes_to_analyze(directory: str, years_months, version):
     chats_dataframes = {}   # key: channel name, value: dataframes
     lives = []
 
     # get the 60 top streamers, because we can't analyze all the streamers
-    top_streamers = get_top_streamers(number_of_streamers=60)
+    top_streamers = get_top_streamers(60, version)
 
     # get all the dirs where there are the chat files
     channel_dirs = [d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d))]
@@ -44,12 +44,12 @@ def get_chats_dataframes_to_analyze(directory: str):
     # get the lives file
     # for every live streaming get the chat files and concat all the dataframes in one
 
-    with open('lives.txt', 'r') as f:
+    with open(f'analyses_and_data/cached_data/lives{version}.txt', 'r') as f:
         lines = f.readlines()
 
     for l in lines:
         # check that the end of the live is in a month in MONTHS
-        if datetime.datetime.strptime(l.split('\t')[2].split(' ')[0], "%Y-%m-%d").strftime('%B').lower() in MONTHS:
+        if datetime.datetime.strptime(l.split('\t')[2].split(' ')[0], "%Y-%m-%d").strftime('%Y%m').lower() in years_months:
             lives.append([l.split('\t')[0], l.split('\t')[1], l.split('\t')[2].strip()])
 
     bar = progressbar.ProgressBar(maxval=len(channel_dirs), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
@@ -138,7 +138,7 @@ def get_top_contributors_impact(chat_df, top_contributors):
     return impact
 
 
-def get_total_impact(saved_impacts):
+def get_total_impact(saved_impacts, version):
     # saved_impacts = {channel_name: {top10: [impact1, impact2, ...], top50:[impact3, impact4]}, ...}
 
     for channel_name in saved_impacts:
@@ -162,7 +162,7 @@ def get_total_impact(saved_impacts):
     saved_impacts['total'] = average_impacts
 
     # get the average impact only for top 50 streamers
-    top_50_streamers = get_top_streamers(number_of_streamers=50)
+    top_50_streamers = get_top_streamers(50, version)
     average_impacts_top_streamers = {}
     for channel_name in saved_impacts:
         if channel_name not in top_50_streamers:
@@ -180,7 +180,7 @@ def get_total_impact(saved_impacts):
     saved_impacts['total_top_streamers'] = average_impacts_top_streamers
 
     # order the dictionary using the order of top streamers
-    top_60_streamers = get_top_streamers(number_of_streamers=60)
+    top_60_streamers = get_top_streamers(60, version)
     saved_impacts_ordered = {}
     for streamer in top_60_streamers:
         if streamer in saved_impacts:
@@ -193,12 +193,12 @@ def get_total_impact(saved_impacts):
     return saved_impacts_ordered
 
 
-def main():
+def for_handler(years_months, version):
     saved_impacts = {}
     chats_dataframes = {}   # key: channel name, value: dataframes
 
     print("> Reading chat files and converting them to dataframes...")
-    chats_dataframes = get_chats_dataframes_to_analyze("downloaded_chats")
+    chats_dataframes = get_chats_dataframes_to_analyze("analyses_and_data/downloaded_chats", years_months, version)
 
     print("> Analyzing chat files...")
     bar = progressbar.ProgressBar(maxval=len(chats_dataframes), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
@@ -227,10 +227,69 @@ def main():
 
     bar.finish()
     
-    saved_impacts = get_total_impact(saved_impacts)
+    saved_impacts = get_total_impact(saved_impacts, version)
+
+    # the previous code calculates the impact of the top 10, top 50 and top 100 chatters but in the graph we want to show the impact of the top 50 and top 100 chatters that are not in the top 10 and top 50 chatters
+    for channel_name in saved_impacts:
+        saved_impacts[channel_name]["top100"] = saved_impacts[channel_name]["top100"] - saved_impacts[channel_name]["top50"]
+        saved_impacts[channel_name]["top50"] = saved_impacts[channel_name]["top50"] - saved_impacts[channel_name]["top10"]
 
     # save the impacts in a csv file
-    with open('analysis_results/top_contributors_impact.csv', 'w') as file:
+    result_str = ""
+    result_str += "channel_name\ttop10\ttop50\ttop100\n"
+
+    for i, channel_name in enumerate(saved_impacts):
+        if channel_name == "total" or channel_name == "total_top_streamers":
+            continue
+        result_str += channel_name
+        for top_n in saved_impacts[channel_name]:
+            result_str += "\t" + str(saved_impacts[channel_name][top_n])
+        result_str += "\n"
+        
+    return result_str
+
+
+def main():
+    years_months = ["202404", "202405", "202406"]
+    version = "202404-202406"
+
+    saved_impacts = {}
+    chats_dataframes = {}   # key: channel name, value: dataframes
+
+    print("> Reading chat files and converting them to dataframes...")
+    chats_dataframes = get_chats_dataframes_to_analyze("analyses_and_data/downloaded_chats", years_months, version)
+
+    print("> Analyzing chat files...")
+    bar = progressbar.ProgressBar(maxval=len(chats_dataframes), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
+    bar.start()
+
+    for i, (channel_name, dataframes) in enumerate(chats_dataframes.items()):
+        for df in dataframes:
+            for top_n in TOP_N_CHATTERS:
+                top_n_str = "top" + str(top_n)
+
+                top_n_contributors = get_top_contributors(df, top_n)
+
+                if len(top_n_contributors) != top_n:
+                    continue
+
+                impact = get_top_contributors_impact(df, top_n_contributors)
+
+                if channel_name not in saved_impacts:
+                    saved_impacts[channel_name] = {}
+                if top_n_str not in saved_impacts[channel_name]:
+                    saved_impacts[channel_name][top_n_str] = []
+
+                saved_impacts[channel_name][top_n_str].append(impact)
+                
+        bar.update(i + 1)
+
+    bar.finish()
+    
+    saved_impacts = get_total_impact(saved_impacts, version)
+
+    # save the impacts in a csv file
+    with open('analyses_and_data/analysis_results/top_contributors_impact.csv', 'w') as file:
         file.write("channel_name\ttop10\ttop50\ttop100\n")
 
         for i, channel_name in enumerate(saved_impacts):
