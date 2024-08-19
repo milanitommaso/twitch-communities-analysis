@@ -4,13 +4,13 @@ from datetime import datetime
 import itertools
 import progressbar
 
-MONTHS = ["december","january","february","march"]
+ANALYSES_REQUIRED = ["top_streamers"]
 
 
-def get_top_streamers(number_of_streamers):
+def get_top_streamers(number_of_streamers, version):
     top_streamers = []
 
-    with open('analysis_results/top_streamers.json', 'r') as f:
+    with open(f'analyses_and_data/cached_data/top_streamers{version}.json', 'r') as f:
         top_streamers = json.load(f)
 
     # take only the first number_of_streamers streamers
@@ -19,10 +19,24 @@ def get_top_streamers(number_of_streamers):
     return top_streamers
 
 
-def get_unique_chatters_count(): 
+def get_year_month_from_chatters_filename(filename):
+    dt =  datetime.strptime(filename, "%Y%m%d_%H%M.json")
+    return dt.strftime("%Y%m")
+
+
+def get_unique_chatters_count(years_months):
+    # get unique chatters for all channels of all twitch italia
+
     chatters_set = set()
 
-    chatters_filenames = [x for x in os.listdir("chatters") if "template" not in x]
+    chatters_filenames = [x for x in os.listdir("analyses_and_data/chatters") if "template" not in x]
+    chatters_filenames_filtered = []
+
+    for filename in chatters_filenames:
+        if get_year_month_from_chatters_filename(filename) in years_months:
+            chatters_filenames_filtered.append(filename)
+
+    chatters_filenames = chatters_filenames_filtered
 
     print("> Counting unique chatters")
 
@@ -30,7 +44,7 @@ def get_unique_chatters_count():
     bar.start()
 
     for i, filename in enumerate(chatters_filenames):
-        with open(f'chatters/{filename}', 'r') as f:
+        with open(f'analyses_and_data/chatters/{filename}', 'r') as f:
             chatters = json.load(f)
 
         for channel in chatters:
@@ -43,14 +57,17 @@ def get_unique_chatters_count():
     return len(chatters_set)
 
 
-def get_chatters(top_streamers):
+def get_chatters(top_streamers, years_months):
     chatters = {}
 
-    chatters_filenames = [x for x in os.listdir("chatters") if "template" not in x]
+    chatters_filenames = [x for x in os.listdir("analyses_and_data/chatters") if "template" not in x]
+    chatters_filenames_filtered = []
 
-    # filter only the chatters files of months in MONTHS
-    chatters_filenames = [x for x in chatters_filenames if datetime.strptime(x.split("_")[0], '%Y%m%d').strftime('%B').lower() in MONTHS]
+    for filename in chatters_filenames:
+        if get_year_month_from_chatters_filename(filename) in years_months:
+            chatters_filenames_filtered.append(filename)
 
+    chatters_filenames = chatters_filenames_filtered
 
     print("> Getting chatters")
 
@@ -58,7 +75,7 @@ def get_chatters(top_streamers):
     bar.start()
 
     for i, filename in enumerate(chatters_filenames):
-        with open(f'chatters/{filename}', 'r') as f:
+        with open(f'analyses_and_data/chatters/{filename}', 'r') as f:
             chatters_dict = json.load(f)
 
         for channel in chatters_dict:
@@ -79,21 +96,43 @@ def get_chatters(top_streamers):
     return chatters
 
 
-def get_streamer_reach(top_streamers, unique_chatters_count):
+def get_streamer_reach(top_streamers, unique_chatters_count, years_months):
     streamer_reach = {}
 
-    chatters = get_chatters(top_streamers)
+    chatters = get_chatters(top_streamers, years_months)
 
     for streamer in top_streamers:
+        if streamer not in chatters:
+            streamer_reach[streamer] = 0
+            continue
         streamer_reach[streamer] = round((len(chatters[streamer]) / unique_chatters_count)*100, 4)
 
     return streamer_reach
 
 
-def main():
-    top_streamers = get_top_streamers(number_of_streamers=100)
+def for_handler(years_months, version):
+    result_str = ""
 
-    unique_chatters_count = get_unique_chatters_count()
+    top_streamers = get_top_streamers(60, version)
+
+    unique_chatters_count = get_unique_chatters_count(years_months)
+
+    streamer_reach = get_streamer_reach(list(top_streamers.keys()), unique_chatters_count, years_months)
+
+    result_str += "Streamer\tReach\n"
+    for streamer in streamer_reach:
+        result_str += f"({int(top_streamers[streamer])}) {streamer}\t{streamer_reach[streamer]}%\n"
+
+    return result_str
+
+
+def main():
+    years_months = ["202404", "202405", "202406"]
+    version = "202404-202406"
+
+    top_streamers = get_top_streamers(60, version)
+
+    unique_chatters_count = get_unique_chatters_count(years_months)
 
     streamer_reach = get_streamer_reach(list(top_streamers.keys()), unique_chatters_count)
 
