@@ -2,6 +2,8 @@ import os
 import progressbar
 from datetime import datetime
 
+ANALYSES_REQUIRED = []
+
 
 def get_days_of_week():
     return ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -35,7 +37,6 @@ def get_turnout(years_months):
         chats = [x for x in os.listdir("analyses_and_data/downloaded_chats/" + channel) if "template" not in x]
 
         for chat in chats:
-
             if not get_year_month_from_chat_filename(chat) in years_months:
                 continue
 
@@ -127,7 +128,8 @@ def for_handler(years_months):
 
 
 def main():
-    turnout = get_turnout(["202401", "202402", "202403"])
+    years_months = ["202401", "202402", "202403"]
+    turnout = get_turnout(years_months)
 
     # save the turnout to a csv file
     minutes = get_minutes_of_day()
@@ -151,6 +153,7 @@ def main():
                 else:
                     file.write("0\t")
             file.write("\n")
+
 
 if __name__ == "__main__":
     main()
