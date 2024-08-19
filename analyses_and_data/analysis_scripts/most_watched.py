@@ -1,6 +1,9 @@
 import os
 import progressbar
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
+import json
+
+ANALYSES_REQUIRED = ["lives_count"]
 
 START_MORNING_TIMESLOT_STR = "07:00:00"
 END_MORNING_TIMESLOT_STR = "12:59:59"
@@ -11,16 +14,14 @@ END_EVENING_TIMESLOT_STR = "00:59:59"
 START_NIGHT_TIMESLOT_STR = "01:00:00"
 END_NIGHT_TIMESLOT_STR = "06:59:59"
 
-MONTHS = ["december","january","february","march"]
-
 
 def get_datetime_from_streams_info_filename(filename):
     return datetime.strptime(filename, "streams_info%Y-%m-%d_%H-%M-%S.txt")
 
 
-def get_month_from_streams_info_filename(filename):
+def get_year_month_from_streams_info_filename(filename):
     dt =  datetime.strptime(filename, "streams_info%Y-%m-%d_%H-%M-%S.txt")
-    return dt.strftime("%B").lower()
+    return dt.strftime("%Y%m").lower()
 
 
 def get_timeslot(time) -> str:
@@ -58,66 +59,15 @@ def get_timeslots_from_range(start, end) -> list:
     return timeslot_list
 
 
-def get_lives_count() -> dict:
-    # get lives count for each streamer for each timeslot
-    lives = {}
-
-    with open("lives.txt", "r") as file:
-        lines = file.readlines()
-
-    print("> Calculating lives count for each streamer for each timeslot")
-    bar = progressbar.ProgressBar(maxval=len(lines), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
-    bar.start()
-
-    for i, line in enumerate(lines):
-        channel = line.split("\t")[0].strip()
-        timestamp_start = line.split("\t")[1].strip()
-        timestamp_end = line.split("\t")[2].strip()
-
-        datetime_start = datetime.strptime(timestamp_start, "%Y-%m-%d %H:%M:%S")
-        datetime_end = datetime.strptime(timestamp_end, "%Y-%m-%d %H:%M:%S")
-
-        timeslot_list = get_timeslots_from_range(datetime_start, datetime_end)
-        month = datetime_start.strftime("%B").lower()
-
-        if month not in lives:
-            lives[month] = {}
-
-        for timeslot in timeslot_list:
-            if timeslot not in lives[month]:
-                lives[month][timeslot] = {}
-
-            if channel not in lives[month][timeslot]:
-                lives[month][timeslot][channel] = 0
-            lives[month][timeslot][channel] += 1 
-        
-        bar.update(i + 1)
-
-    bar.finish()
-
-    # calculate the total
-    lives["total"] = {}
-    for month in lives:
-        if month == "total":
-            continue
-        for timeslot in lives[month]:
-            for streamer in lives[month][timeslot]:
-                if timeslot not in lives["total"]:
-                    lives["total"][timeslot] = {}
-                if streamer not in lives["total"][timeslot]:
-                    lives["total"][timeslot][streamer] = 0
-                lives["total"][timeslot][streamer] += lives[month][timeslot][streamer]
-
-    # for every timeslot, sort the streamers by lives count
-    for month in lives:
-        for timeslot in lives[month]:
-            lives[month][timeslot] = {k: v for k, v in sorted(lives[month][timeslot].items(), key=lambda item: item[1], reverse=True)}
+def get_lives_count(version) -> dict:
+    with open(f"analyses_and_data/cached_data/lives_count{version}.json", "r") as file:
+        lives = json.load(file)
 
     return lives
 
 
-def get_top_streamers_by_viewers_timeslots():
-    top_streamers = {}  # key: month, value: dict with key: timeslot, value: dict with key: streamer, value: average viewers
+def get_top_streamers_by_viewers_timeslots(years_months, min_total_lives, version):
+    top_streamers = {}  # key: month, value: dict with key timeslot, value: dict with key: streamer, value: average viewers
     # top_streamers = {
     #     "january": {
     #         "morning": {
@@ -130,10 +80,10 @@ def get_top_streamers_by_viewers_timeslots():
     #     ...
     # }
 
-    lives_count = get_lives_count()
+    lives_count = get_lives_count(version)
 
     # get all streams info filenames
-    streams_info = [x for x in os.listdir("streams_info") if "template" not in x]
+    streams_info = [x for x in os.listdir("analyses_and_data/streams_info") if "template" not in x]
     streams_info.sort()
 
     streams_info = streams_info[::5]  # take every 5th file to reduce the number of files to process
@@ -143,12 +93,17 @@ def get_top_streamers_by_viewers_timeslots():
     bar.start()
 
     for i, streams in enumerate(streams_info):
+        bar.update(i + 1)
+
         datetime = get_datetime_from_streams_info_filename(streams)
         time = datetime.time()
         timeslot = get_timeslot(time)
-        month = get_month_from_streams_info_filename(streams)
+        month = get_year_month_from_streams_info_filename(streams)
 
-        with open("streams_info/" + streams, "r") as file:
+        if month not in years_months:
+            continue
+
+        with open("analyses_and_data/streams_info/" + streams, "r") as file:
             lines = file.readlines()
 
         for line in lines:
@@ -164,8 +119,6 @@ def get_top_streamers_by_viewers_timeslots():
             if streamer not in top_streamers[month][timeslot]:
                 top_streamers[month][timeslot][streamer] = []
             top_streamers[month][timeslot][streamer].append(viewers)
-
-        bar.update(i + 1)
 
     bar.finish()
 
@@ -188,16 +141,14 @@ def get_top_streamers_by_viewers_timeslots():
 
     # calculate the average viewers for each month, timeslot and streamer
     for i, month in enumerate(top_streamers):
-        if month != "total" and month not in MONTHS:
-            continue
 
         for timeslot in top_streamers[month]:
             for streamer in top_streamers[month][timeslot]:
                 # check if the streamer has at least made 10 lives per timeslot in the month or 30 lives in total
-                if month == "total" and (streamer not in lives_count["total"][timeslot] or lives_count["total"][timeslot][streamer] < 30):
+                if month == "total" and (streamer not in lives_count[timeslot] or lives_count[timeslot][streamer] < min_total_lives):
                     top_streamers[month][timeslot][streamer] = -1
                     continue
-                if month != "total" and (streamer not in lives_count[month][timeslot] or lives_count[month][timeslot][streamer] < 10):
+                if month != "total" and (streamer not in lives_count[timeslot] or lives_count[timeslot][streamer] < 10):
                     top_streamers[month][timeslot][streamer] = -1
                     continue
                 top_streamers[month][timeslot][streamer] = round(sum(top_streamers[month][timeslot][streamer]) / len(top_streamers[month][timeslot][streamer]), 2)
@@ -214,14 +165,37 @@ def get_top_streamers_by_viewers_timeslots():
     return top_streamers
 
 
+def for_handler(years_months, version):
+    result_str = ""
+    min_total_lives = len(years_months) * 10    # corresponds to 30%
+
+    top_streamers = get_top_streamers_by_viewers_timeslots(years_months, min_total_lives, version)
+
+    # keep only the total
+    top_streamers = top_streamers["total"]
+
+    # save the top streamers to csv files
+    for timeslot in top_streamers:
+        result_str += f"{timeslot}\n"
+        for streamer in top_streamers[timeslot]:
+            result_str += f"{streamer}\t{top_streamers[timeslot][streamer]}\n"
+        result_str += "\n"
+
+    return result_str
+
+
 def main():
-    top_streamers = get_top_streamers_by_viewers_timeslots()
+    years_months = ["202404", "202405", "202406"]
+    version = "202404-202406"
+    min_total_lives = len(years_months) * 10    # corresponds to 30%
+
+    top_streamers = get_top_streamers_by_viewers_timeslots(years_months, min_total_lives, version)
 
     # save the top streamers to csv files
     for month in top_streamers:
-        if month != "total" and month not in MONTHS:
+        if month != "total" and month not in years_months:
             continue
-        with open(f"analysis_results/top_streamers_by_viewers_timeslots-{month}.csv", "w") as file:
+        with open(f"analyses_and_data/analysis_results/top_streamers_by_viewers_timeslots-{month}.csv", "w") as file:
             for timeslot in top_streamers[month]:
                 file.write(f"{timeslot}\n")
                 for streamer in top_streamers[month][timeslot]:
