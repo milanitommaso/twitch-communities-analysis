@@ -231,8 +231,10 @@ def for_handler(years_months, version):
 
     # the previous code calculates the impact of the top 10, top 50 and top 100 chatters but in the graph we want to show the impact of the top 50 and top 100 chatters that are not in the top 10 and top 50 chatters
     for channel_name in saved_impacts:
-        saved_impacts[channel_name]["top100"] = saved_impacts[channel_name]["top100"] - saved_impacts[channel_name]["top50"]
-        saved_impacts[channel_name]["top50"] = saved_impacts[channel_name]["top50"] - saved_impacts[channel_name]["top10"]
+        if "top100" in saved_impacts[channel_name]:
+            saved_impacts[channel_name]["top100"] = saved_impacts[channel_name]["top100"] - saved_impacts[channel_name]["top50"]
+        if "top50" in saved_impacts[channel_name]:
+            saved_impacts[channel_name]["top50"] = saved_impacts[channel_name]["top50"] - saved_impacts[channel_name]["top10"]
 
     # save the impacts in a csv file
     result_str = ""
