@@ -1,23 +1,24 @@
 import os
-from pprint import pprint
 from datetime import datetime, timedelta
 import progressbar
 import matplotlib.pyplot as plt
 import numpy as np
 
+ANALYSES_REQUIRED = []
 
 MIN_RAID_USERS = 400
 MIN_VIEWERS_DESTINATION = 200
 
 
-def get_raids():
+def get_raids(years_months):
     raids = []
+    raids_filtered = []
 
     # get the filenames of events
-    filenames = [x for x in os.listdir("downloaded_events") if "template" not in x]
+    filenames = [x for x in os.listdir("analyses_and_data/downloaded_events") if "template" not in x]
 
     for f in filenames:
-        with open("downloaded_events/" + f, "r") as file:
+        with open("analyses_and_data/downloaded_events/" + f, "r") as file:
             for line in file:
                 if "\traid\t" in line:
                     # print(line, f)
@@ -32,7 +33,16 @@ def get_raids():
                     if int(raid_viewers) > MIN_RAID_USERS:
                         raids.append({"raid_datetime": raid_datetime, "raided_channel": raided_channel_name, "raid_viewers": raid_viewers})
 
-    return raids
+    # filter only the raids that happened in the months we are interested in
+    for raid in raids:
+        raid_datetime = raid["raid_datetime"]
+        raid_datetime = datetime.strptime(raid_datetime, "%y-%m-%d_%H-%M-%S")
+        raid_datetime = raid_datetime.strftime("%Y%m")
+
+        if raid_datetime in years_months:
+            raids_filtered.append(raid)
+
+    return raids_filtered
 
 
 def get_viewers_after_raids(raids):
@@ -43,7 +53,7 @@ def get_viewers_after_raids(raids):
     #   ...
     # ]
 
-    streams_info = [x for x in os.listdir("streams_info") if "template" not in x]
+    streams_info = [x for x in os.listdir("analyses_and_data/streams_info") if "template" not in x]
     streams_info.sort()
 
     bar = progressbar.ProgressBar(maxval=len(raids), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
@@ -61,7 +71,7 @@ def get_viewers_after_raids(raids):
         streams_info_sublist = []
         r_datetime = datetime.strptime(raid_datetime, "%y-%m-%d_%H-%M-%S")
         for s in streams_info:
-            s_datetime = datetime.strptime(s.split(".")[0].strip("streams_info"), "%Y-%m-%d_%H-%M-%S")
+            s_datetime = datetime.strptime(s.split(".")[0].strip("analyses_and_data/streams_info"), "%Y-%m-%d_%H-%M-%S")
             if r_datetime - timedelta(minutes=2) <= s_datetime <= r_datetime + timedelta(minutes=60):
                 streams_info_sublist.append(s)
 
@@ -72,7 +82,7 @@ def get_viewers_after_raids(raids):
 
         viewers_count_list = []
         for s in streams_info_sublist:
-            with open("streams_info/" + s, "r") as file:
+            with open("analyses_and_data/streams_info/" + s, "r") as file:
                 for line in file:
                     if raided_channel in line:
                         viewers_count_list.append(int(line.split("\t")[2].strip()))
@@ -150,13 +160,33 @@ def draw_graph(mean_viewers_after_raid):
     plt.xlabel('Time after the raid (minutes)')
     plt.ylabel('viewers arrived from raid')
 
-    plt.savefig("analysis_results/mean_viewers_after_raid.png")
+    plt.savefig("analyses_and_data/analysis_results/mean_viewers_after_raid.png")
+
+
+def for_handler(years_months, version):
+    result_str = ""
+
+    raids = get_raids(years_months)
+
+    print(f"> Found {len(raids)} raids")
+
+    viewers_after_raids = get_viewers_after_raids(raids)
+    viewers_after_raids = normalize_viewers_count(viewers_after_raids)
+
+    mean_viewers_after_raid = get_mean_viewers_after_raids(viewers_after_raids)[0:45]   # take only the first 45 minutes
+
+    result_str += "time\tmean_viewers\n"
+    for i, v in enumerate(mean_viewers_after_raid):
+        result_str += f"{i}\t{v}\n"
+
+    return result_str
 
 
 def main():
+    years_months = ["202404", "202405", "202406"]
     viewers_after_raids = []
 
-    raids = get_raids()
+    raids = get_raids(years_months)
 
     print(f"> Found {len(raids)} raids")
 
@@ -166,12 +196,12 @@ def main():
     mean_viewers_after_raid = get_mean_viewers_after_raids(viewers_after_raids)
 
     # save the data in a csv file
-    with open("analysis_results/post_raid_viewers_flow.csv", "w") as file:
+    with open("analyses_and_data/analysis_results/post_raid_viewers_flow.csv", "w") as file:
         file.write("time\tmean_viewers\n")
         for i, v in enumerate(mean_viewers_after_raid):
             file.write(f"{i}\t{v}\n")
 
-    draw_graph(mean_viewers_after_raid)
+    # draw_graph(mean_viewers_after_raid)
 
 
 if __name__ == '__main__':
