@@ -2,6 +2,9 @@ import os
 import progressbar
 from datetime import datetime
 
+ANALYSES_REQUIRED = []
+
+
 def get_days_of_week():
     return ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
@@ -44,6 +47,7 @@ def get_turnout(years_months):
         year_month = get_year_month_from_streams_info_filename(streams)
 
         if year_month not in years_months:
+            bar.update(i + 1)
             continue
 
         with open("analyses_and_data/streams_info/" + streams, "r") as file:
@@ -118,7 +122,7 @@ def draw_graph(turnout):
 
     plt.legend()
 
-    plt.savefig("analysis_results/turnout.png")
+    # plt.savefig("analysis_results/turnout.png")
 
 
 def for_handler(years_months: list):
@@ -146,14 +150,13 @@ def for_handler(years_months: list):
 
 
 def main():
-    turnout = get_turnout(["202401", "202402", "202403"])
+    years_months = ["202401", "202402", "202403"]
+    turnout = get_turnout(years_months)
 
     # draw_graph(turnout)
 
     # save the turnout to a csv file
     for month in turnout:
-        if month != "december" and month != "january" and month != "february" and month != "march" and month != "total":
-            continue
         with open(f"analyses_and_data/analysis_results/turnout-{month}.csv", "w") as file:
             file.write("Hour:Minute\t")
             days = get_days_of_week()
