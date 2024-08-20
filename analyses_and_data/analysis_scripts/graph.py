@@ -1,23 +1,22 @@
 import json
 from datetime import datetime, timedelta
+import calendar
 from pprint import pprint
 from collections import Counter
 import progressbar
 
-
-START_DATETIME = datetime.strptime("2023-12-01 00:00:00", '%Y-%m-%d %H:%M:%S')
-END_DATETIME = datetime.strptime("2024-03-31 23:59:59", '%Y-%m-%d %H:%M:%S')
+ANALYSES_REQUIRED = ["top_streamers"]
 
 
-def get_chatters(streamers_in):
+def get_chatters(streamers_in, start_datetime, end_datetime):
     chatters = {}
-    current_start_datetime = START_DATETIME
+    current_start_datetime = start_datetime
 
     print("> Getting chatters...")
 
-    while END_DATETIME > current_start_datetime:
+    while end_datetime > current_start_datetime:
         # open chatters file
-        filename = "chatters/" + current_start_datetime.strftime('%Y%m%d_%H%M') + '.json'
+        filename = "analyses_and_data/chatters/" + current_start_datetime.strftime('%Y%m%d_%H%M') + '.json'
         with open(filename, "r") as f:
             c = json.load(f)
 
@@ -44,7 +43,6 @@ def find_edges(chatters_in):
     bar.start()
 
     for i, streamer1 in enumerate(chatters_in):
-
         for streamer2 in chatters_in:
             if streamer1 == streamer2:
                 continue
@@ -71,35 +69,64 @@ def find_edges(chatters_in):
     # take only edges with weight > 0
     edges = [edge for edge in edges if edge[2] > 0]
 
+    return edges
+
+
+def get_nodes(number_of_nodes, version):
+    print("> Getting nodes...")
+    nodes = []
+
+    with open(f'analyses_and_data/cached_data/top_streamers{version}.txt', 'r') as f:
+        lines = f.readlines()[0:number_of_nodes]
+    for l in lines:
+        nodes.append(l.strip())
+
+    return nodes
+
+
+def for_handler(years_months, version):
+    ret_str = ""
+    nodes = get_nodes(400, version)
+
+    start_datetime = datetime.strptime(years_months[0], '%Y%m')
+
+    end_datetime = datetime.strptime(years_months[-1], '%Y%m')
+    last_day = calendar.monthrange(int(end_datetime.strftime('%Y')), int(end_datetime.strftime('%m')))[-1]
+    end_datetime = end_datetime.replace(day = last_day, hour = 23, minute = 59)
+
+    chatters = get_chatters(nodes, start_datetime, end_datetime)
+
+    edges = find_edges(chatters)
+
+    ret_str += "Source\tTarget\tWeight\n"
+    for edge in edges:
+        ret_str += f"{edge[0]}\t{edge[1]}\t{edge[2]}\n"
+
+    return ret_str
+
+
+def main():
+    years_months = ["202401", "202402", "202403"]
+    version = "202401-202403"
+
+    nodes = get_nodes(400, version)
+
+    start_datetime = datetime.strptime(years_months[0], '%Y%m')
+
+    end_datetime = datetime.strptime(years_months[-1], '%Y%m')
+    last_day = calendar.monthrange(int(end_datetime.strftime('%Y')), int(end_datetime.strftime('%m')))[-1]
+    end_datetime = end_datetime.replace(day = last_day, hour = 23, minute = 59)
+
+    chatters = get_chatters(nodes, start_datetime, end_datetime)
+
+    edges = find_edges(chatters)
+
     # save edges to file
-    with open("analysis_results/edges.csv", "w") as f:
+    with open("analyses_and_data/analysis_results/edges.csv", "w") as f:
         f.write("Source\tTarget\tWeight\n")
         for edge in edges:
             f.write(f"{edge[0]}\t{edge[1]}\t{edge[2]}\n")
 
 
-def get_nodes(number_of_nodes):
-    print("> Getting nodes...")
-    nodes = []
-
-    with open('top_streamers.txt', 'r') as f:
-        lines = f.readlines()[0:number_of_nodes]
-    for l in lines:
-        nodes.append(l.strip())
-
-    # in top_stremers.txt there are only the streamers with at least 10 lives
-
-    # # save nodes to file
-    # with open("nodes.csv", "w") as f:
-    #     for node in nodes:
-    #         f.write(f"{node}\n")
-
-    return nodes
-
-
 if __name__ == "__main__":
-    nodes = get_nodes(number_of_nodes=400)
-
-    chatters = get_chatters(nodes)
-
-    find_edges(chatters)
+    main()
