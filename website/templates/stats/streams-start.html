@@ -72,8 +72,10 @@
                 },
                 scales: {
                     y: {
+                        max: 100,
+                        beginAtZero: true,
                         ticks: {
-                            // Include a dollar sign in the ticks
+                            // Include a percentage sign in the ticks
                             callback: function(value, index, ticks) {
                                 return value + "%";
                             }
