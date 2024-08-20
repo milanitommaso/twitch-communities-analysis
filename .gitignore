@@ -9,6 +9,7 @@ analyses_and_data/lives.txt
 analyses_and_data/analysis_results/*
 analyses_and_data/top_streamers.txt
 analyses_and_data/downloaded_emotes.json
+analyses_and_data/cached_data/*
 
 website/static/analyses_results/*
 website/static/graphs/*
