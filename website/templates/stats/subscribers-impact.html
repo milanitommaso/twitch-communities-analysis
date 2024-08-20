@@ -47,6 +47,11 @@
         // get the data
         xValues = Object.keys(result);
 
+        // sort the data
+        xValues.sort(function(a, b) {
+            return result[b] - result[a];
+        });
+
         data = [];
         for (let i = 0; i < xValues.length; i++) {
             data.push(result[xValues[i]]);

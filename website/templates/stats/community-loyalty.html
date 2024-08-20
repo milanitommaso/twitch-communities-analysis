@@ -45,8 +45,12 @@
 
     function create_chart(result) {
         // get the data
-
         xValues = Object.keys(result);
+
+        // sort the data
+        xValues.sort(function(a, b) {
+            return result[a]["1"] - result[b]["1"];
+        });
 
         data_1 = [];
         for (let i = 0; i < xValues.length; i++) {
