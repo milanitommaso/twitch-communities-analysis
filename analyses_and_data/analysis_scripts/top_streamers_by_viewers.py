@@ -3,12 +3,22 @@ import progressbar
 import json
 from datetime import datetime
 
-def get_lives_count():
+ANALYSES_REQUIRED = ["lives"]
+
+def get_year_month_from_streams_info_filename(filename):
+    dt =  datetime.strptime(filename, "streams_info%Y-%m-%d_%H-%M-%S.txt")
+    return dt.strftime("%Y%m").lower()
+
+
+def get_lives_count(years_months, version):
     lives = {}
 
-    with open("lives.txt", "r") as file:
+    with open(f"analyses_and_data/cached_data/lives{version}.txt", "r") as file:
         lines = file.readlines()
     for line in lines:
+        if datetime.strptime(line.split("\t")[1].strip(), "%Y-%m-%d %H:%M:%S").strftime("%Y%m").lower() not in years_months:
+            continue
+
         channel = line.split("\t")[0].strip()
         if channel not in lives:
             lives[channel] = 0
@@ -17,22 +27,29 @@ def get_lives_count():
     return lives
 
 
-def get_top_streamers_by_viewers():
+def get_top_streamers_by_viewers(years_months, version):
     top_streamers = {}  # key: streamer, value: average viewers
+    min_lives = 4 * len(years_months)  # the streamer must have made at least 4 live streams in each month
 
     # get all streams info filenames
-    streams_info = [x for x in os.listdir("streams_info") if "template" not in x]
+    streams_info = [x for x in os.listdir("analyses_and_data/streams_info") if "template" not in x]
     streams_info.sort()
 
     streams_info = streams_info[::5]  # take every 5th file to reduce the number of files to process
 
-    print("> Calculating the average viewers for each streamer and checking that the streamers has made at least 10 live streams")
+    print(f"> Calculating the average viewers for each streamer and checking that the streamers has made at least {min_lives} live streams")
 
     bar = progressbar.ProgressBar(maxval=len(streams_info), widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
     bar.start()
 
     for i, streams in enumerate(streams_info):
-        with open("streams_info/" + streams, "r") as file:
+
+        # check that the file is in the years_months
+        if get_year_month_from_streams_info_filename(streams) not in years_months:
+            bar.update(i + 1)
+            continue
+
+        with open("analyses_and_data/streams_info/" + streams, "r") as file:
             lines = file.readlines()
         for line in lines:
             streamer = line.split("\t")[0].strip()
@@ -46,10 +63,10 @@ def get_top_streamers_by_viewers():
 
     bar.finish()
 
-    # calculate the average viewers for each streamer and check that the streamers has made at least 10 live streams
-    lives_count = get_lives_count()
+    # calculate the average viewers for each streamer and check that the streamers has made at least min_lives live streams
+    lives_count = get_lives_count(years_months, version)
     for streamer in list(top_streamers.keys()):
-        if streamer not in lives_count or lives_count[streamer] < 10:
+        if streamer not in lives_count or lives_count[streamer] < min_lives:
             del top_streamers[streamer]
         else:
             top_streamers[streamer] = round(sum(top_streamers[streamer]) / len(top_streamers[streamer]), 2)
@@ -81,6 +98,12 @@ def get_streamer_count_by_viewers_slot(top_streamer):
                     break
 
     return streamer_count_by_viewers_slot
+
+
+def for_handler(years_months, version):
+    top_streamers = get_top_streamers_by_viewers(years_months, version)
+
+    return top_streamers
 
 
 def main():
