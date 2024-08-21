@@ -49,8 +49,14 @@ def index():
     for k in live_stats:
         live_stats[k] = get_with_tousands_separators(live_stats[k])
 
+    # get the version
+    # get the previous month
+    today = datetime.today()
+    last_day_prev_month = today.replace(day=1) - timedelta(days=1)
+    version = [last_day_prev_month.strftime("%Y%m"), last_day_prev_month.strftime("%B %Y")]
+
     # most watched
-    most_watched_by_timeslots = get_stat_data("most-watched", "last_7_days")
+    most_watched_by_timeslots = get_stat_data("most-watched", version[0])
 
     if most_watched_by_timeslots == "not found":
         most_watched_by_timeslots = {"morning": {}, "afternoon": {}, "evening": {}, "night": {}}
@@ -58,12 +64,7 @@ def index():
         for t in most_watched_by_timeslots:
             most_watched_by_timeslots[t] = [f"{k} ({int(v)})" for k, v in most_watched_by_timeslots[t].items()]
 
-    # get the version
-    # get the previous month
-    today = datetime.today()
-    last_day_prev_month = today.replace(day=1) - timedelta(days=1)
-    version = [last_day_prev_month.strftime("%Y%m"), last_day_prev_month.strftime("%B %Y")]
-
+    
     return render_template("index.html", live_stats=live_stats, most_watched_by_timeslots=most_watched_by_timeslots, version=version)
 
 
